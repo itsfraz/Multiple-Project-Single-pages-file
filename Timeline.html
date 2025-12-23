@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Timeline - Competition Winner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #0f172a;
+            --success: #4ade80;
+            --warning: #facc15;
+            --danger: #f87171;
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto 2rem;
+            color: #a0aec0;
+        }
+
+        /* Controls section */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(76, 201, 240, 0.3);
+            color: var(--accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .control-btn:hover {
+            background: rgba(67, 97, 238, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .control-btn.active {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.4);
+        }
+
+        .search-box {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(76, 201, 240, 0.3);
+            border-radius: 30px;
+            padding: 0.6rem 1.5rem;
+            color: white;
+            width: 300px;
+            outline: none;
+        }
+
+        .search-box::placeholder {
+            color: #94a3b8;
+        }
+
+        /* Timeline container */
+        .timeline-container {
+            position: relative;
+            margin: 4rem 0;
+            padding: 2rem 0;
+        }
+
+        /* Timeline line */
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, var(--primary), var(--accent));
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(76, 201, 240, 0.5);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 4rem;
+            width: 100%;
+            opacity: 0;
+            transform: translateY(50px);
+        }
+
+        .timeline-item:nth-child(odd) {
+            padding-right: calc(50% + 30px);
+            text-align: right;
+        }
+
+        .timeline-item:nth-child(even) {
+            padding-left: calc(50% + 30px);
+        }
+
+        .timeline-marker {
+            position: absolute;
+            top: 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 4px solid var(--dark);
+            box-shadow: 0 0 0 4px var(--primary), 0 0 20px rgba(76, 201, 240, 0.7);
+            z-index: 10;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-marker {
+            right: -15px;
+        }
+
+        .timeline-item:nth-child(even) .timeline-marker {
+            left: -15px;
+        }
+
+        .timeline-content {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: var(--transition);
+            border: 1px solid rgba(76, 201, 240, 0.2);
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timeline-content:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            border-color: rgba(76, 201, 240, 0.5);
+        }
+
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+        }
+
+        .date {
+            display: inline-block;
+            background: rgba(67, 97, 238, 0.2);
+            color: var(--accent);
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .description {
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            background: rgba(76, 201, 240, 0.15);
+            color: var(--accent);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .media-preview {
+            display: flex;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        .media-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            background: rgba(76, 201, 240, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .media-thumb:hover {
+            background: rgba(76, 201, 240, 0.3);
+            transform: scale(1.1);
+        }
+
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: rgba(30, 41, 59, 0.95);
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            background: rgba(67, 97, 238, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 2rem;
+            color: var(--accent);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--light);
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .close-modal:hover {
+            color: var(--accent);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        .media-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .media-item {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .media-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .media-item img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .media-caption {
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.7);
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .modal-description {
+            line-height: 1.7;
+            margin: 1.5rem 0;
+            color: #cbd5e1;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            text-align: center;
+            border-top: 1px solid rgba(76, 201, 240, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.6);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-outline:hover {
+            background: rgba(76, 201, 240, 0.1);
+        }
+
+        /* Navigation */
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(76, 201, 240, 0.3);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn:hover {
+            background: rgba(67, 97, 238, 0.3);
+            transform: translateY(-3px);
+        }
+
+        /* Progress bar */
+        .progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        /* Responsive design */
+        @media (max-width: 992px) {
+            .timeline::before {
+                left: 30px;
+            }
+            
+            .timeline-item:nth-child(odd),
+            .timeline-item:nth-child(even) {
+                padding: 0 0 0 80px;
+                text-align: left;
+            }
+            
+            .timeline-marker {
+                left: 15px !important;
+                right: auto !important;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .search-box {
+                width: 200px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .title {
+                font-size: 1.5rem;
+            }
+            
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+            
+            .control-group {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .search-box {
+                width: 100%;
+                margin-top: 10px;
+            }
+        }
+
+        /* Animation classes */
+        .fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Decorative elements */
+        .decoration {
+            position: absolute;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
+        .decoration-1 {
+            top: 10%;
+            left: 5%;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: var(--primary);
+            filter: blur(80px);
+        }
+
+        .decoration-2 {
+            bottom: 10%;
+            right: 5%;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: var(--accent);
+            filter: blur(100px);
+        }
+
+        .decoration-3 {
+            top: 40%;
+            right: 15%;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--warning);
+            filter: blur(60px);
+        }
+
+        /* Stats section */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            min-width: 150px;
+            border: 1px solid rgba(76, 201, 240, 0.2);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(76, 201, 240, 0.5);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        /* Theme switcher */
+        .theme-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .theme-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(76, 201, 240, 0.3);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-btn:hover {
+            background: rgba(67, 97, 238, 0.3);
+            transform: rotate(15deg);
+        }
+
+        /* Filter dropdown */
+        .filter-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .filter-btn {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(76, 201, 240, 0.3);
+            color: var(--accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .filter-content {
+            display: none;
+            position: absolute;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(76, 201, 240, 0.3);
+        }
+
+        .filter-content a {
+            color: var(--light);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: var(--transition);
+        }
+
+        .filter-content a:hover {
+            background: rgba(76, 201, 240, 0.1);
+        }
+
+        .filter-dropdown:hover .filter-content {
+            display: block;
+        }
+
+        /* Loading animation */
+        .loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(76, 201, 240, 0.3);
+            border-top: 5px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            color: var(--light);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid var(--accent);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 3000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="decoration decoration-1"></div>
+    <div class="decoration decoration-2"></div>
+    <div class="decoration decoration-3"></div>
+    
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    
+    <div class="theme-switcher">
+        <div class="theme-btn" id="themeToggle">
+            <i class="fas fa-moon"></i>
+        </div>
+    </div>
+    
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1>Interactive Timeline</h1>
+            <p class="subtitle">A competition-winning design with smooth animations, rich multimedia, and engaging interactions</p>
+        </header>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="eventCount">6</div>
+                <div class="stat-label">Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="mediaCount">18</div>
+                <div class="stat-label">Media Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="decadeCount">6</div>
+                <div class="stat-label">Decades</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <button class="control-btn active" id="allBtn">
+                    <i class="fas fa-globe"></i> All Events
+                </button>
+                <div class="filter-dropdown">
+                    <button class="filter-btn">
+                        <i class="fas fa-filter"></i> Filter <i class="fas fa-caret-down"></i>
+                    </button>
+                    <div class="filter-content">
+                        <a href="#" data-filter="space">Space Exploration</a>
+                        <a href="#" data-filter="technology">Technology</a>
+                        <a href="#" data-filter="science">Science</a>
+                        <a href="#" data-filter="discovery">Discovery</a>
+                    </div>
+                </div>
+                <button class="control-btn" id="timelineViewBtn">
+                    <i class="fas fa-list"></i> Timeline View
+                </button>
+            </div>
+            <input type="text" class="search-box" placeholder="Search events..." id="searchInput">
+        </div>
+        
+        <div class="timeline-container">
+            <div class="timeline">
+                <!-- Timeline Item 1 -->
+                <div class="timeline-item" data-year="1969" data-category="space">
+                    <div class="timeline-marker" data-event="moon-landing"></div>
+                    <div class="timeline-content">
+                        <span class="date">July 20, 1969</span>
+                        <h2 class="title">Moon Landing</h2>
+                        <div class="tags">
+                            <span class="tag">Space Exploration</span>
+                            <span class="tag">Historic</span>
+                        </div>
+                        <p class="description">Apollo 11 successfully lands on the Moon, marking the first human steps on another celestial body.</p>
+                        <div class="media-preview">
+                            <div class="media-thumb"><i class="fas fa-video"></i></div>
+                            <div class="media-thumb"><i class="fas fa-images"></i></div>
+                            <div class="media-thumb"><i class="fas fa-music"></i></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Item 2 -->
+                <div class="timeline-item" data-year="1981" data-category="technology">
+                    <div class="timeline-marker" data-event="space-shuttle"></div>
+                    <div class="timeline-content">
+                        <span class="date">April 12, 1981</span>
+                        <h2 class="title">First Space Shuttle Flight</h2>
+                        <div class="tags">
+                            <span class="tag">Technology</span>
+                            <span class="tag">Reusable</span>
+                        </div>
+                        <p class="description">Columbia becomes the first reusable spacecraft to fly in space, launching a new era of space exploration.</p>
+                        <div class="media-preview">
+                            <div class="media-thumb"><i class="fas fa-video"></i></div>
+                            <div class="media-thumb"><i class="fas fa-images"></i></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Item 3 -->
+                <div class="timeline-item" data-year="1990" data-category="science">
+                    <div class="timeline-marker" data-event="hubble"></div>
+                    <div class="timeline-content">
+                        <span class="date">April 24, 1990</span>
+                        <h2 class="title">Hubble Space Telescope</h2>
+                        <div class="tags">
+                            <span class="tag">Science</span>
+                            <span class="tag">Astronomy</span>
+                        </div>
+                        <p class="description">The Hubble Space Telescope is deployed, revolutionizing our understanding of the universe.</p>
+                        <div class="media-preview">
+                            <div class="media-thumb"><i class="fas fa-images"></i></div>
+                            <div class="media-thumb"><i class="fas fa-book"></i></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Item 4 -->
+                <div class="timeline-item" data-year="2004" data-category="space">
+                    <div class="timeline-marker" data-event="vision"></div>
+                    <div class="timeline-content">
+                        <span class="date">January 14, 2004</span>
+                        <h2 class="title">Vision for Space Exploration</h2>
+                        <div class="tags">
+                            <span class="tag">Space Exploration</span>
+                            <span class="tag">Future</span>
+                        </div>
+                        <p class="description">NASA announces plans to return humans to the Moon and eventually send them to Mars.</p>
+                        <div class="media-preview">
+                            <div class="media-thumb"><i class="fas fa-images"></i></div>
+                            <div class="media-thumb"><i class="fas fa-book"></i></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Item 5 -->
+                <div class="timeline-item" data-year="2012" data-category="discovery">
+                    <div class="timeline-marker" data-event="curiosity"></div>
+                    <div class="timeline-content">
+                        <span class="date">August 6, 2012</span>
+                        <h2 class="title">Curiosity Lands on Mars</h2>
+                        <div class="tags">
+                            <span class="tag">Discovery</span>
+                            <span class="tag">Mars</span>
+                        </div>
+                        <p class="description">The Mars Science Laboratory rover Curiosity successfully lands on Mars to search for signs of life.</p>
+                        <div class="media-preview">
+                            <div class="media-thumb"><i class="fas fa-video"></i></div>
+                            <div class="media-thumb"><i class="fas fa-images"></i></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Item 6 -->
+                <div class="timeline-item" data-year="2020" data-category="technology">
+                    <div class="timeline-marker" data-event="spacex"></div>
+                    <div class="timeline-content">
+                        <span class="date">May 30, 2020</span>
+                        <h2 class="title">First Crewed SpaceX Mission</h2>
+                        <div class="tags">
+                            <span class="tag">Technology</span>
+                            <span class="tag">Commercial</span>
+                        </div>
+                        <p class="description">SpaceX's Crew Dragon Demo-2 mission marks the first crewed flight from U.S. soil since 2011.</p>
+                        <div class="media-preview">
+                            <div class="media-thumb"><i class="fas fa-video"></i></div>
+                            <div class="media-thumb"><i class="fas fa-images"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for detailed view -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Space Exploration Milestone</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="media-container">
+                    <div class="media-item">
+                        <img src="https://images.unsplash.com/photo-1454789548928-9a7310581f93?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80" alt="Space Exploration">
+                        <div class="media-caption">Historical footage of the event</div>
+                    </div>
+                    <div class="media-item">
+                        <img src="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80" alt="Space Technology">
+                        <div class="media-caption">Technological advancements</div>
+                    </div>
+                </div>
+                <p class="modal-description">This milestone represents a significant achievement in space exploration. The event not only demonstrated technological prowess but also opened new possibilities for future missions. The impact of this achievement continues to influence current and future space programs, inspiring a new generation of scientists and explorers.</p>
+                <p class="modal-description">The detailed documentation of this event includes technical specifications, mission objectives, crew information, and the scientific discoveries made. These resources provide valuable insights into the complexities and challenges of space exploration.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline"><i class="fas fa-download"></i> Download Resources</button>
+                <button class="btn"><i class="fas fa-share-alt"></i> Share Event</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation Controls -->
+    <div class="navigation">
+        <button class="nav-btn" id="prevBtn"><i class="fas fa-arrow-up"></i></button>
+        <button class="nav-btn" id="nextBtn"><i class="fas fa-arrow-down"></i></button>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Event added to favorites!</div>
+
+    <script>
+        // Initialize GSAP and ScrollTrigger
+        gsap.registerPlugin(ScrollTrigger);
+        
+        // DOM Elements
+        const progressBar = document.getElementById('progressBar');
+        const loader = document.getElementById('loader');
+        const toast = document.getElementById('toast');
+        const themeToggle = document.getElementById('themeToggle');
+        const searchInput = document.getElementById('searchInput');
+        const allBtn = document.getElementById('allBtn');
+        const timelineViewBtn = document.getElementById('timelineViewBtn');
+        const modal = document.getElementById('detailModal');
+        const closeBtn = document.querySelector('.close-modal');
+        const timelineContents = document.querySelectorAll('.timeline-content');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const timelineItems = document.querySelectorAll('.timeline-item');
+        const markers = document.querySelectorAll('.timeline-marker');
+        
+        // Show loader on page load
+        window.addEventListener('load', () => {
+            loader.style.display = 'flex';
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 1500);
+        });
+        
+        // Animate timeline items on scroll
+        gsap.utils.toArray('.timeline-item').forEach((item, i) => {
+            gsap.fromTo(item, 
+                { opacity: 0, y: 50 },
+                {
+                    opacity: 1,
+                    y: 0,
+                    duration: 1,
+                    scrollTrigger: {
+                        trigger: item,
+                        start: "top 80%",
+                        toggleActions: "play none none reverse"
+                    }
+                }
+            );
+        });
+        
+        // Animate timeline markers
+        gsap.utils.toArray('.timeline-marker').forEach((marker, i) => {
+            gsap.fromTo(marker, 
+                { scale: 0, opacity: 0 },
+                {
+                    scale: 1,
+                    opacity: 1,
+                    duration: 0.8,
+                    delay: 0.3,
+                    scrollTrigger: {
+                        trigger: marker,
+                        start: "top 80%",
+                        toggleActions: "play none none reverse"
+                    }
+                }
+            );
+        });
+        
+        // Update progress bar on scroll
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.body.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            progressBar.style.width = `${scrollPercent}%`;
+        });
+        
+        // Modal functionality
+        timelineContents.forEach(content => {
+            content.addEventListener('click', () => {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+        
+        // Navigation controls
+        let currentIndex = 0;
+        
+        function scrollToItem(index) {
+            if (index >= 0 && index < timelineItems.length) {
+                currentIndex = index;
+                timelineItems[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        prevBtn.addEventListener('click', () => {
+            scrollToItem(currentIndex - 1);
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            scrollToItem(currentIndex + 1);
+        });
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                scrollToItem(currentIndex - 1);
+            } else if (e.key === 'ArrowDown') {
+                scrollToItem(currentIndex + 1);
+            }
+        });
+        
+        // Add hover effects to markers
+        markers.forEach(marker => {
+            marker.addEventListener('mouseenter', () => {
+                gsap.to(marker, { scale: 1.3, duration: 0.3 });
+            });
+            
+            marker.addEventListener('mouseleave', () => {
+                gsap.to(marker, { scale: 1, duration: 0.3 });
+            });
+            
+            // Add click to jump to event
+            marker.addEventListener('click', () => {
+                const event = marker.getAttribute('data-event');
+                const item = document.querySelector(`.timeline-item .timeline-marker[data-event="${event}"]`).closest('.timeline-item');
+                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Show toast notification
+                showToast(`Jumped to ${event.replace('-', ' ')} event`);
+            });
+        });
+        
+        // Theme toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            const icon = themeToggle.querySelector('i');
+            if (document.body.classList.contains('light-theme')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                document.body.style.background = 'linear-gradient(135deg, #e0e7ff, #dbeafe, #dbeafe)';
+                document.body.style.color = '#1e293b';
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                document.body.style.background = 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)';
+                document.body.style.color = '#f8f9fa';
+            }
+            showToast('Theme changed');
+        });
+        
+        // Search functionality
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            timelineItems.forEach(item => {
+                const title = item.querySelector('.title').textContent.toLowerCase();
+                const description = item.querySelector('.description').textContent.toLowerCase();
+                const tags = Array.from(item.querySelectorAll('.tag')).map(tag => tag.textContent.toLowerCase());
+                
+                if (title.includes(searchTerm) || description.includes(searchTerm) || tags.some(tag => tag.includes(searchTerm))) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+        
+        // Filter functionality
+        document.querySelectorAll('.filter-content a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const filter = e.target.getAttribute('data-filter');
+                
+                timelineItems.forEach(item => {
+                    const category = item.getAttribute('data-category');
+                    if (category === filter || filter === 'all') {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                showToast(`Filtered by ${filter}`);
+            });
+        });
+        
+        // All events button
+        allBtn.addEventListener('click', () => {
+            timelineItems.forEach(item => {
+                item.style.display = 'block';
+            });
+            showToast('Showing all events');
+        });
+        
+        // Timeline view toggle
+        timelineViewBtn.addEventListener('click', () => {
+            document.querySelector('.timeline').classList.toggle('horizontal');
+            showToast('Timeline view changed');
+        });
+        
+        // Toast notification function
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Simulate data loading
+        setTimeout(() => {
+            document.getElementById('eventCount').textContent = '12';
+            document.getElementById('mediaCount').textContent = '36';
+            document.getElementById('decadeCount').textContent = '7';
+        }, 2000);
+    </script>
+</body>
+</html>

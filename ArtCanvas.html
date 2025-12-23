@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generative Art Studio | Interactive Canvas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #6a11cb;
+            --secondary: #2575fc;
+            --accent: #ff2d75;
+            --dark: #0f0c29;
+            --darker: #090718;
+            --light: #f0f0f5;
+            --card-bg: rgba(25, 20, 50, 0.7);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker), var(--dark));
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            text-align: center;
+            padding: 25px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ff7e5f, #feb47b, #6a11cb, #2575fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto 15px;
+            line-height: 1.6;
+        }
+
+        .tagline {
+            display: inline-block;
+            background: rgba(106, 17, 203, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 25px;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.2);
+            min-height: 70vh;
+            transition: var(--transition);
+        }
+
+        canvas {
+            display: block;
+            background: #0a0a14;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            width: 320px;
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+            transition: var(--transition);
+        }
+
+        .control-group {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #ff7e5f;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h2 i {
+            font-size: 1.3rem;
+        }
+
+        .slider-container {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .value {
+            color: #feb47b;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(106, 17, 203, 0.7);
+            transition: var(--transition);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(106, 17, 203, 0.9);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        button {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .btn-accent {
+            background: linear-gradient(90deg, var(--accent), #ff6b9c);
+        }
+
+        .algorithm-selector {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .algorithm-btn {
+            background: rgba(255, 255, 255, 0.08);
+            text-align: left;
+            padding: 15px;
+            border-radius: 10px;
+            transition: var(--transition);
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .algorithm-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+
+        .algorithm-btn.active {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(106, 17, 203, 0.4);
+        }
+
+        .algorithm-btn i {
+            font-size: 1.2rem;
+            width: 30px;
+            text-align: center;
+        }
+
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 25px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            margin-bottom: 12px;
+            color: #feb47b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .instructions ul {
+            padding-left: 25px;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+        }
+
+        .key {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 1rem;
+            opacity: 0.8;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: auto;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 0.9rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #feb47b;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.8;
+        }
+
+        .presets {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            color: var(--light);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.85rem;
+        }
+
+        .preset-btn:hover {
+            background: rgba(106, 17, 203, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .controls {
+                width: 100%;
+                max-height: 400px;
+            }
+            
+            #canvas-container {
+                min-height: 60vh;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .controls {
+                padding: 20px;
+            }
+            
+            .buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .presets {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .header-content {
+                padding: 0 10px;
+            }
+            
+            .controls {
+                padding: 15px;
+            }
+            
+            .presets {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animation effects */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Particle effects */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1><i class="fas fa-paint-brush"></i> Generative Art Studio</h1>
+            <p class="subtitle">Experience the beauty of algorithmic art. Interact with evolving patterns, customize parameters, and create unique visual experiences.</p>
+            <div class="tagline">Real-time generative art with physics-based interactions</div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div id="canvas-container">
+            <canvas id="artCanvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h2><i class="fas fa-magic"></i> Art Algorithms</h2>
+                <div class="algorithm-selector">
+                    <button class="algorithm-btn active" data-algorithm="particles">
+                        <i class="fas fa-circle"></i> Particle System
+                    </button>
+                    <button class="algorithm-btn" data-algorithm="fractal">
+                        <i class="fas fa-tree"></i> Fractal Tree
+                    </button>
+                    <button class="algorithm-btn" data-algorithm="automata">
+                        <i class="fas fa-th"></i> Cellular Automata
+                    </button>
+                    <button class="algorithm-btn" data-algorithm="noise">
+                        <i class="fas fa-water"></i> Flow Field
+                    </button>
+                    <button class="algorithm-btn" data-algorithm="voronoi">
+                        <i class="fas fa-gem"></i> Voronoi Patterns
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2><i class="fas fa-sliders-h"></i> Parameters</h2>
+                <div class="slider-container">
+                    <label>
+                        <span>Animation Speed</span>
+                        <span class="value" id="speed-value">1.0</span>
+                    </label>
+                    <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        <span>Particle Count</span>
+                        <span class="value" id="particle-count-value">200</span>
+                    </label>
+                    <input type="range" id="particle-count" min="50" max="1000" step="10" value="200">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        <span>Noise Scale</span>
+                        <span class="value" id="noise-scale-value">0.01</span>
+                    </label>
+                    <input type="range" id="noise-scale" min="0.001" max="0.05" step="0.001" value="0.01">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        <span>Color Intensity</span>
+                        <span class="value" id="color-intensity-value">0.8</span>
+                    </label>
+                    <input type="range" id="color-intensity" min="0.1" max="1" step="0.1" value="0.8">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        <span>Particle Size</span>
+                        <span class="value" id="particle-size-value">2.0</span>
+                    </label>
+                    <input type="range" id="particle-size" min="0.5" max="8" step="0.1" value="2">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2><i class="fas fa-palette"></i> Presets</h2>
+                <div class="presets">
+                    <button class="preset-btn" data-preset="cosmic">Cosmic</button>
+                    <button class="preset-btn" data-preset="ocean">Ocean</button>
+                    <button class="preset-btn" data-preset="fire">Fire</button>
+                    <button class="preset-btn" data-preset="forest">Forest</button>
+                    <button class="preset-btn" data-preset="neon">Neon</button>
+                    <button class="preset-btn" data-preset="rainbow">Rainbow</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2><i class="fas fa-gamepad"></i> Controls</h2>
+                <div class="buttons">
+                    <button id="reset-btn"><i class="fas fa-sync"></i> Reset</button>
+                    <button id="randomize-btn" class="btn-accent"><i class="fas fa-random"></i> Randomize</button>
+                    <button id="screenshot-btn"><i class="fas fa-camera"></i> Screenshot</button>
+                    <button id="fullscreen-btn"><i class="fas fa-expand"></i> Fullscreen</button>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <h3><i class="fas fa-info-circle"></i> Interaction Guide</h3>
+                <ul>
+                    <li><span class="key">Mouse Move</span>: Influence particle movement</li>
+                    <li><span class="key">Mouse Click</span>: Create new elements</li>
+                    <li><span class="key">Mouse Wheel</span>: Adjust particle size</li>
+                    <li><span class="key">Keys 1-5</span>: Switch algorithms</li>
+                    <li><span class="key">Spacebar</span>: Pause/resume animation</li>
+                    <li><span class="key">R</span>: Reset canvas</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Generative Art Studio v2.0 | Created with HTML5 Canvas, JavaScript & ❤️</p>
+    </footer>
+
+    <script>
+        // Main canvas setup
+        const canvas = document.getElementById('artCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas to full container size
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Global variables
+        let algorithm = 'particles';
+        let particles = [];
+        let branches = [];
+        let cells = [];
+        let noiseOffset = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        let mouseDown = false;
+        let animationId;
+        let paused = false;
+        let voronoiPoints = [];
+        let colorPalette = 'rainbow';
+        
+        // Configuration
+        const config = {
+            speed: 1.0,
+            particleCount: 200,
+            noiseScale: 0.01,
+            colorIntensity: 0.8,
+            particleSize: 2,
+            connectionDistance: 100
+        };
+        
+        // Color palettes
+        const palettes = {
+            cosmic: ['#6a11cb', '#2575fc', '#00c9ff', '#92fe9d'],
+            ocean: ['#00c6ff', '#0072ff', '#00d2ff', '#3a7bd5'],
+            fire: ['#ff416c', '#ff4b2b', '#ff7e5f', '#feb47b'],
+            forest: ['#134e5e', '#71b280', '#38ef7d', '#11998e'],
+            neon: ['#ff00cc', '#333399', '#00ccff', '#ff0066'],
+            rainbow: ['#ff0000', '#ff7700', '#ffff00', '#00ff00', '#0000ff', '#8a2be2']
+        };
+        
+        // Initialize the selected algorithm
+        function initAlgorithm() {
+            particles = [];
+            branches = [];
+            cells = [];
+            voronoiPoints = [];
+            
+            switch(algorithm) {
+                case 'particles':
+                    initParticles();
+                    break;
+                case 'fractal':
+                    initFractal();
+                    break;
+                case 'automata':
+                    initAutomata();
+                    break;
+                case 'noise':
+                    initNoiseField();
+                    break;
+                case 'voronoi':
+                    initVoronoi();
+                    break;
+            }
+        }
+        
+        // Particle System
+        function initParticles() {
+            for (let i = 0; i < config.particleCount; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: Math.random() * 3 + 1,
+                    color: getRandomColor(),
+                    life: 1.0,
+                    history: []
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                // Store position history for trails
+                p.history.push({x: p.x, y: p.y});
+                if (p.history.length > 15) {
+                    p.history.shift();
+                }
+                
+                // Mouse interaction
+                const dx = mouseX - p.x;
+                const dy = mouseY - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 150) {
+                    const force = (150 - dist) / 150;
+                    p.vx += dx * force * 0.02;
+                    p.vy += dy * force * 0.02;
+                }
+                
+                // Apply velocity
+                p.x += p.vx * config.speed;
+                p.y += p.vy * config.speed;
+                
+                // Boundary check with wrapping
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+                
+                // Slow down over time
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                
+                // Add some randomness
+                p.vx += (Math.random() - 0.5) * 0.1;
+                p.vy += (Math.random() - 0.5) * 0.1;
+            }
+        }
+        
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw connections between close particles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p2 = particles[j];
+                    const dx = p.x - p2.x;
+                    const dy = p.y - p2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < config.connectionDistance) {
+                        const alpha = 0.3 * (1 - dist/config.connectionDistance);
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Draw particles with trails
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                // Draw trail
+                for (let j = 0; j < p.history.length - 1; j++) {
+                    const point = p.history[j];
+                    const nextPoint = p.history[j + 1];
+                    
+                    const alpha = j / p.history.length;
+                    ctx.beginPath();
+                    ctx.moveTo(point.x, point.y);
+                    ctx.lineTo(nextPoint.x, nextPoint.y);
+                    ctx.strokeStyle = `${p.color}${Math.floor(alpha * 100).toString(16).padStart(2, '0')}`;
+                    ctx.lineWidth = p.size * alpha * 0.7;
+                    ctx.stroke();
+                }
+                
+                // Draw particle
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * config.particleSize, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                
+                // Glow effect
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * config.particleSize * 1.5, 0, Math.PI * 2);
+                const gradient = ctx.createRadialGradient(
+                    p.x, p.y, 0,
+                    p.x, p.y, p.size * config.particleSize * 1.5
+                );
+                gradient.addColorStop(0, p.color);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+        }
+        
+        // Fractal Tree
+        function initFractal() {
+            branches = [{
+                x: canvas.width / 2,
+                y: canvas.height,
+                angle: -Math.PI / 2,
+                length: 120,
+                depth: 0,
+                color: getRandomColor()
+            }];
+        }
+        
+        function updateFractal() {
+            // Grow the tree
+            if (branches.length < 800) {
+                const lastBranch = branches[branches.length - 1];
+                
+                if (lastBranch.depth < 10) {
+                    const newBranches = [];
+                    
+                    // Main branch
+                    newBranches.push({
+                        x: lastBranch.x + Math.cos(lastBranch.angle) * lastBranch.length,
+                        y: lastBranch.y + Math.sin(lastBranch.angle) * lastBranch.length,
+                        angle: lastBranch.angle,
+                        length: lastBranch.length * 0.75,
+                        depth: lastBranch.depth + 1,
+                        color: getRandomColor()
+                    });
+                    
+                    // Left branch
+                    newBranches.push({
+                        x: lastBranch.x + Math.cos(lastBranch.angle) * lastBranch.length,
+                        y: lastBranch.y + Math.sin(lastBranch.angle) * lastBranch.length,
+                        angle: lastBranch.angle - Math.PI/5 + (Math.random() - 0.5) * 0.5,
+                        length: lastBranch.length * 0.65,
+                        depth: lastBranch.depth + 1,
+                        color: getRandomColor()
+                    });
+                    
+                    // Right branch
+                    newBranches.push({
+                        x: lastBranch.x + Math.cos(lastBranch.angle) * lastBranch.length,
+                        y: lastBranch.y + Math.sin(lastBranch.angle) * lastBranch.length,
+                        angle: lastBranch.angle + Math.PI/5 + (Math.random() - 0.5) * 0.5,
+                        length: lastBranch.length * 0.65,
+                        depth: lastBranch.depth + 1,
+                        color: getRandomColor()
+                    });
+                    
+                    branches.push(...newBranches);
+                }
+            }
+        }
+        
+        function drawFractal() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < branches.length; i++) {
+                const b = branches[i];
+                
+                ctx.strokeStyle = b.color;
+                ctx.lineWidth = Math.max(1, 10 - b.depth * 0.8);
+                
+                ctx.beginPath();
+                ctx.moveTo(b.x, b.y);
+                
+                const endX = b.x + Math.cos(b.angle) * b.length;
+                const endY = b.y + Math.sin(b.angle) * b.length;
+                
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                
+                // Add leaf at the end of branches
+                if (b.depth > 7) {
+                    ctx.beginPath();
+                    ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = getRandomColor();
+                    ctx.fill();
+                }
+            }
+        }
+        
+        // Cellular Automata
+        function initAutomata() {
+            // Create a grid of cells
+            const cellSize = 6;
+            const cols = Math.ceil(canvas.width / cellSize);
+            const rows = Math.ceil(canvas.height / cellSize);
+            
+            cells = [];
+            for (let y = 0; y < rows; y++) {
+                cells[y] = [];
+                for (let x = 0; x < cols; x++) {
+                    // Random initial state
+                    cells[y][x] = Math.random() > 0.7 ? 1 : 0;
+                }
+            }
+        }
+        
+        function updateAutomata() {
+            const cellSize = 6;
+            const cols = Math.ceil(canvas.width / cellSize);
+            const rows = Math.ceil(canvas.height / cellSize);
+            
+            // Create a copy of the current state
+            const newCells = [];
+            for (let y = 0; y < rows; y++) {
+                newCells[y] = [];
+                for (let x = 0; x < cols; x++) {
+                    newCells[y][x] = cells[y][x];
+                }
+            }
+            
+            // Apply Conway's Game of Life rules
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    let neighbors = 0;
+                    
+                    // Count live neighbors
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            
+                            const nx = (x + dx + cols) % cols;
+                            const ny = (y + dy + rows) % rows;
+                            
+                            neighbors += cells[ny][nx];
+                        }
+                    }
+                    
+                    // Apply rules
+                    if (cells[y][x] === 1) {
+                        // Cell is alive
+                        if (neighbors < 2 || neighbors > 3) {
+                            newCells[y][x] = 0; // Dies
+                        }
+                    } else {
+                        // Cell is dead
+                        if (neighbors === 3) {
+                            newCells[y][x] = 1; // Becomes alive
+                        }
+                    }
+                }
+            }
+            
+            // Update the cells array
+            cells = newCells;
+        }
+        
+        function drawAutomata() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const cellSize = 6;
+            const cols = Math.ceil(canvas.width / cellSize);
+            const rows = Math.ceil(canvas.height / cellSize);
+            
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (cells[y][x] === 1) {
+                        const hue = (x * y * 0.5 + Date.now() * 0.02) % 360;
+                        ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                        
+                        // Add glow effect
+                        ctx.beginPath();
+                        ctx.arc(
+                            x * cellSize + cellSize/2, 
+                            y * cellSize + cellSize/2, 
+                            cellSize * 0.8, 
+                            0, 
+                            Math.PI * 2
+                        );
+                        const gradient = ctx.createRadialGradient(
+                            x * cellSize + cellSize/2, 
+                            y * cellSize + cellSize/2, 
+                            0,
+                            x * cellSize + cellSize/2, 
+                            y * cellSize + cellSize/2, 
+                            cellSize * 0.8
+                        );
+                        gradient.addColorStop(0, `hsla(${hue}, 80%, 60%, 0.8)`);
+                        gradient.addColorStop(1, 'transparent');
+                        ctx.fillStyle = gradient;
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+        
+        // Perlin Noise Flow Field
+        function initNoiseField() {
+            particles = [];
+            for (let i = 0; i < config.particleCount; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: 0,
+                    vy: 0,
+                    size: Math.random() * 2 + 1,
+                    color: getRandomColor(),
+                    history: []
+                });
+            }
+        }
+        
+        // Simplified Perlin noise function
+        function noise(x, y) {
+            return Math.sin(x * 0.01) * Math.cos(y * 0.01) * 0.5 + 0.5;
+        }
+        
+        function updateNoiseField() {
+            noiseOffset += 0.01 * config.speed;
+            
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                // Get noise value at particle position
+                const angle = noise(p.x, p.y + noiseOffset) * Math.PI * 2;
+                
+                // Apply force in the direction of the noise gradient
+                p.vx += Math.cos(angle) * 0.1;
+                p.vy += Math.sin(angle) * 0.1;
+                
+                // Limit velocity
+                const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                if (speed > 3) {
+                    p.vx = (p.vx / speed) * 3;
+                    p.vy = (p.vy / speed) * 3;
+                }
+                
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Store position history for trails
+                p.history.push({x: p.x, y: p.y});
+                if (p.history.length > 20) {
+                    p.history.shift();
+                }
+                
+                // Boundary check with wrapping
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+            }
+        }
+        
+        function drawNoiseField() {
+            ctx.fillStyle = 'rgba(10, 10, 20, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                // Draw particle trail
+                for (let j = 0; j < p.history.length - 1; j++) {
+                    const point = p.history[j];
+                    const nextPoint = p.history[j + 1];
+                    
+                    const alpha = j / p.history.length;
+                    ctx.beginPath();
+                    ctx.moveTo(point.x, point.y);
+                    ctx.lineTo(nextPoint.x, nextPoint.y);
+                    ctx.strokeStyle = `${p.color}${Math.floor(alpha * 100).toString(16).padStart(2, '0')}`;
+                    ctx.lineWidth = p.size * alpha * config.particleSize;
+                    ctx.stroke();
+                }
+                
+                // Draw particle
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * config.particleSize, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            }
+        }
+        
+        // Voronoi Diagram
+        function initVoronoi() {
+            voronoiPoints = [];
+            for (let i = 0; i < 50; i++) {
+                voronoiPoints.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    color: getRandomColor(),
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5
+                });
+            }
+        }
+        
+        function updateVoronoi() {
+            for (let i = 0; i < voronoiPoints.length; i++) {
+                const p = voronoiPoints[i];
+                
+                // Move points slowly
+                p.x += p.vx * config.speed;
+                p.y += p.vy * config.speed;
+                
+                // Boundary check with bouncing
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                
+                // Keep within bounds
+                p.x = Math.max(0, Math.min(canvas.width, p.x));
+                p.y = Math.max(0, Math.min(canvas.height, p.y));
+            }
+        }
+        
+        function drawVoronoi() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Voronoi cells
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    let minDist = Infinity;
+                    let closestPoint = null;
+                    
+                    // Find the closest point
+                    for (let i = 0; i < voronoiPoints.length; i++) {
+                        const p = voronoiPoints[i];
+                        const dx = x - p.x;
+                        const dy = y - p.y;
+                        const dist = dx * dx + dy * dy;
+                        
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestPoint = p;
+                        }
+                    }
+                    
+                    // Set pixel color based on closest point
+                    const idx = (y * canvas.width + x) * 4;
+                    const color = hexToRgb(closestPoint.color);
+                    
+                    data[idx] = color.r;     // R
+                    data[idx + 1] = color.g; // G
+                    data[idx + 2] = color.b; // B
+                    data[idx + 3] = 255;     // A
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Draw points
+            for (let i = 0; i < voronoiPoints.length; i++) {
+                const p = voronoiPoints[i];
+                
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+        
+        // Helper functions
+        function getRandomColor() {
+            const palette = palettes[colorPalette];
+            return palette[Math.floor(Math.random() * palette.length)];
+        }
+        
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : {r: 0, g: 0, b: 0};
+        }
+        
+        // Animation loop
+        function animate() {
+            if (!paused) {
+                switch(algorithm) {
+                    case 'particles':
+                        updateParticles();
+                        drawParticles();
+                        break;
+                    case 'fractal':
+                        updateFractal();
+                        drawFractal();
+                        break;
+                    case 'automata':
+                        updateAutomata();
+                        drawAutomata();
+                        break;
+                    case 'noise':
+                        updateNoiseField();
+                        drawNoiseField();
+                        break;
+                    case 'voronoi':
+                        updateVoronoi();
+                        drawVoronoi();
+                        break;
+                }
+            }
+            
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('mousedown', () => {
+            mouseDown = true;
+            
+            // Add particles on click
+            if (algorithm === 'particles' || algorithm === 'noise') {
+                for (let i = 0; i < 30; i++) {
+                    particles.push({
+                        x: mouseX + (Math.random() - 0.5) * 100,
+                        y: mouseY + (Math.random() - 0.5) * 100,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        size: Math.random() * 3 + 1,
+                        color: getRandomColor(),
+                        life: 1.0
+                    });
+                }
+            }
+            
+            // Add Voronoi point
+            if (algorithm === 'voronoi') {
+                voronoiPoints.push({
+                    x: mouseX,
+                    y: mouseY,
+                    color: getRandomColor(),
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5
+                });
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+        
+        canvas.addEventListener('click', () => {
+            // Add particles on click
+            if (algorithm === 'particles' || algorithm === 'noise') {
+                for (let i = 0; i < 30; i++) {
+                    particles.push({
+                        x: mouseX + (Math.random() - 0.5) * 100,
+                        y: mouseY + (Math.random() - 0.5) * 100,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        size: Math.random() * 3 + 1,
+                        color: getRandomColor(),
+                        life: 1.0
+                    });
+                }
+            }
+            
+            // Add Voronoi point
+            if (algorithm === 'voronoi') {
+                voronoiPoints.push({
+                    x: mouseX,
+                    y: mouseY,
+                    color: getRandomColor(),
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5
+                });
+            }
+        });
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            config.particleSize = Math.max(0.5, Math.min(10, config.particleSize + (e.deltaY > 0 ? -0.2 : 0.2)));
+            document.getElementById('particle-size-value').textContent = config.particleSize.toFixed(1);
+        });
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1':
+                    setAlgorithm('particles');
+                    break;
+                case '2':
+                    setAlgorithm('fractal');
+                    break;
+                case '3':
+                    setAlgorithm('automata');
+                    break;
+                case '4':
+                    setAlgorithm('noise');
+                    break;
+                case '5':
+                    setAlgorithm('voronoi');
+                    break;
+                case ' ':
+                    paused = !paused;
+                    break;
+                case 'r':
+                case 'R':
+                    initAlgorithm();
+                    break;
+            }
+        });
+        
+        // UI Controls
+        function setAlgorithm(newAlgorithm) {
+            algorithm = newAlgorithm;
+            
+            // Update UI
+            document.querySelectorAll('.algorithm-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.algorithm-btn[data-algorithm="${algorithm}"]`).classList.add('active');
+            
+            // Reinitialize
+            initAlgorithm();
+        }
+        
+        document.querySelectorAll('.algorithm-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setAlgorithm(btn.dataset.algorithm);
+            });
+        });
+        
+        // Slider controls
+        document.getElementById('speed').addEventListener('input', (e) => {
+            config.speed = parseFloat(e.target.value);
+            document.getElementById('speed-value').textContent = config.speed.toFixed(1);
+        });
+        
+        document.getElementById('particle-count').addEventListener('input', (e) => {
+            config.particleCount = parseInt(e.target.value);
+            document.getElementById('particle-count-value').textContent = config.particleCount;
+            
+            if (algorithm === 'particles' || algorithm === 'noise') {
+                // Adjust particle count
+                while (particles.length < config.particleCount) {
+                    particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        size: Math.random() * 3 + 1,
+                        color: getRandomColor(),
+                        life: 1.0
+                    });
+                }
+                
+                while (particles.length > config.particleCount) {
+                    particles.pop();
+                }
+            }
+        });
+        
+        document.getElementById('noise-scale').addEventListener('input', (e) => {
+            config.noiseScale = parseFloat(e.target.value);
+            document.getElementById('noise-scale-value').textContent = config.noiseScale.toFixed(3);
+        });
+        
+        document.getElementById('color-intensity').addEventListener('input', (e) => {
+            config.colorIntensity = parseFloat(e.target.value);
+            document.getElementById('color-intensity-value').textContent = config.colorIntensity.toFixed(1);
+        });
+        
+        document.getElementById('particle-size').addEventListener('input', (e) => {
+            config.particleSize = parseFloat(e.target.value);
+            document.getElementById('particle-size-value').textContent = config.particleSize.toFixed(1);
+        });
+        
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            initAlgorithm();
+        });
+        
+        document.getElementById('randomize-btn').addEventListener('click', () => {
+            // Randomize parameters
+            config.speed = Math.random() * 2 + 0.5;
+            config.particleCount = Math.floor(Math.random() * 800) + 100;
+            config.noiseScale = Math.random() * 0.04 + 0.005;
+            config.colorIntensity = Math.random() * 0.8 + 0.2;
+            config.particleSize = Math.random() * 4 + 1;
+            
+            // Update UI
+            document.getElementById('speed').value = config.speed;
+            document.getElementById('speed-value').textContent = config.speed.toFixed(1);
+            
+            document.getElementById('particle-count').value = config.particleCount;
+            document.getElementById('particle-count-value').textContent = config.particleCount;
+            
+            document.getElementById('noise-scale').value = config.noiseScale;
+            document.getElementById('noise-scale-value').textContent = config.noiseScale.toFixed(3);
+            
+            document.getElementById('color-intensity').value = config.colorIntensity;
+            document.getElementById('color-intensity-value').textContent = config.colorIntensity.toFixed(1);
+            
+            document.getElementById('particle-size').value = config.particleSize;
+            document.getElementById('particle-size-value').textContent = config.particleSize.toFixed(1);
+            
+            initAlgorithm();
+        });
+        
+        document.getElementById('screenshot-btn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'generative-art.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+        
+        document.getElementById('fullscreen-btn').addEventListener('click', () => {
+            const container = document.getElementById('canvas-container');
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) {
+                container.webkitRequestFullscreen();
+            } else if (container.msRequestFullscreen) {
+                container.msRequestFullscreen();
+            }
+        });
+        
+        // Preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                colorPalette = btn.dataset.preset;
+                initAlgorithm();
+            });
+        });
+        
+        // Initialize and start animation
+        initAlgorithm();
+        animate();
+        
+        // Create floating particles for background effect
+        function createFloatingParticles() {
+            const container = document.querySelector('body');
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // Random size and position
+                const size = Math.random() * 10 + 2;
+                const posX = Math.random() * 100;
+                const posY = Math.random() * 100;
+                
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${posX}%`;
+                particle.style.top = `${posY}%`;
+                particle.style.opacity = Math.random() * 0.5 + 0.1;
+                particle.style.animationDuration = `${Math.random() * 10 + 10}s`;
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                
+                container.appendChild(particle);
+            }
+        }
+        
+        // Initialize floating particles
+        createFloatingParticles();
+    </script>
+</body>
+</html>

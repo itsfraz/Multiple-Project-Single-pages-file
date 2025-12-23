@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Hub | Creative Portfolio</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #ec4899;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --gradient-2: linear-gradient(to right, #ec4899, #8b5cf6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15) 0%, transparent 25%);
+            filter: blur(40px);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 4rem 0 6rem;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.05em;
+            line-height: 1.2;
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Grid Layout */
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            padding-bottom: 4rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--gradient-1);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .icon-wrapper {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .icon-wrapper {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .icon-wrapper i {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            transition: color 0.3s ease;
+        }
+
+        .card:hover .icon-wrapper i {
+            color: white;
+        }
+
+        .card h2 {
+            color: var(--text-main);
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+        }
+
+        .view-btn {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: gap 0.3s ease;
+        }
+
+        .card:hover .view-btn {
+            gap: 0.8rem;
+            color: #a855f7;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid var(--glass-border);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: auto;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .container { padding: 1rem; }
+            header { padding: 3rem 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+
+    <div class="container">
+        <header>
+            <h1>My Projects</h1>
+            <p class="subtitle">A collection of interactive web experiments and tools. Explore the creative coding journey.</p>
+        </header>
+
+        <div class="project-grid">
+            
+            <!-- Project 1: Age Calculator -->
+            <a href="AgeCalculator.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-calculator"></i></div>
+                <h2>Age Calculator</h2>
+                <p>Calculate your exact age in years, months, and days with precision. Features a sleek updated UI.</p>
+                <div class="card-footer">
+                    <span class="tag">Utility</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 2: Art Canvas -->
+            <a href="ArtCanvas.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-palette"></i></div>
+                <h2>Art Canvas</h2>
+                <p>A digital canvas for your creativity. Draw, paint, and sketch directly in your browser.</p>
+                <div class="card-footer">
+                    <span class="tag">Creative</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 3: Galaxy -->
+            <a href="Galaxy.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-user-astronaut"></i></div>
+                <h2>The Galaxy</h2>
+                <p>Explore the cosmos with this interactive galaxy visualization. A mesmerizing space experience.</p>
+                <div class="card-footer">
+                    <span class="tag">3D / Visual</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 4: Sparkle -->
+            <a href="Sparkle.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <h2>Sparkle Trail</h2>
+                <p>Add some magic to your screen with this interactive sparkle trail animation.</p>
+                <div class="card-footer">
+                    <span class="tag">Animation</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 5: Timeline -->
+            <a href="Timeline.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-timeline"></i></div>
+                <h2>Timeline</h2>
+                <p>Visualize events and history with a responsive and clean vertical timeline component.</p>
+                <div class="card-footer">
+                    <span class="tag">Layout</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 6: Todo App -->
+            <a href="TodoApp.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-check-double"></i></div>
+                <h2>Todo App</h2>
+                <p>Stay organized with a functional Todo application. Add, remove, and manage your daily tasks.</p>
+                <div class="card-footer">
+                    <span class="tag">Productivity</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 7: What To Eat -->
+            <a href="WhatToEat.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-utensils"></i></div>
+                <h2>What To Eat?</h2>
+                <p>Can't decide? Let the wheel decide your next meal. A fun decision-making tool.</p>
+                <div class="card-footer">
+                    <span class="tag">Fun</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 8: Bounce -->
+            <a href="bounce.html" class="card">
+                <div class="icon-wrapper"><i class="fa-solid fa-basketball"></i></div>
+                <h2>Bouncing Balls</h2>
+                <p>A physics-based simulation of bouncing balls. Interactive and satisfying to watch.</p>
+                <div class="card-footer">
+                    <span class="tag">Physics</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+            <!-- Project 9: Circle -->
+            <a href="circle.html" class="card">
+                <div class="icon-wrapper"><i class="fa-regular fa-circle-dot"></i></div>
+                <h2>Circle Animation</h2>
+                <p>Smooth and hypnotic circle animations. A study in motion and geometry.</p>
+                <div class="card-footer">
+                    <span class="tag">Animation</span>
+                    <span class="view-btn">View Project <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </a>
+
+        </div>
+
+        <footer>
+            <p>&copy; 2025 Creative Portfolio. Built with &hearts; and Code.</p>
+        </footer>
+    </div>
+
+</body>
+</html>

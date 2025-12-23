@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Particle System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(255, 126, 95, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            z-index: 10;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        h2 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: #ff7e5f;
+            display: flex;
+            align-items: center;
+        }
+        
+        h2 i {
+            margin-right: 10px;
+        }
+        
+        .slider-container {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ff7e5f;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 126, 95, 0.5);
+        }
+        
+        .value-display {
+            text-align: right;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        .presets {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(255, 126, 95, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .preset-btn.active {
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            box-shadow: 0 0 15px rgba(255, 126, 95, 0.5);
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 126, 95, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 126, 95, 0.5);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 5;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #feb47b;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .controls {
+                width: 100%;
+                max-height: 250px;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .instructions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Interactive Particle System</h1>
+        <p class="subtitle">A physics-based particle system that forms text and responds to your movements with elegant animations</p>
+    </header>
+    
+    <div class="container">
+        <div id="canvas-container">
+            <canvas id="particleCanvas"></canvas>
+            <div class="instructions">
+                <h3>How to Interact</h3>
+                <ul>
+                    <li>Move your cursor to repel particles</li>
+                    <li>Click to create particle explosions</li>
+                    <li>Try different presets for unique behaviors</li>
+                    <li>Adjust parameters using the control panel</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h2>⚙️ Physics Parameters</h2>
+                <div class="slider-container">
+                    <label for="particleCount">Particle Count</label>
+                    <input type="range" id="particleCount" min="100" max="2000" value="800">
+                    <div class="value-display"><span id="countValue">800</span> particles</div>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="repulsion">Mouse Repulsion Strength</label>
+                    <input type="range" id="repulsion" min="0" max="500" value="150">
+                    <div class="value-display"><span id="repulsionValue">150</span></div>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="attraction">Shape Attraction Strength</label>
+                    <input type="range" id="attraction" min="0" max="100" value="20">
+                    <div class="value-display"><span id="attractionValue">20</span></div>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="friction">Velocity Friction</label>
+                    <input type="range" id="friction" min="0.8" max="0.99" step="0.001" value="0.95">
+                    <div class="value-display"><span id="frictionValue">0.95</span></div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2>🎨 Visual Effects</h2>
+                <div class="slider-container">
+                    <label for="size">Particle Size</label>
+                    <input type="range" id="size" min="1" max="10" step="0.5" value="2">
+                    <div class="value-display"><span id="sizeValue">2</span>px</div>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="trail">Trail Effect</label>
+                    <input type="range" id="trail" min="0" max="0.2" step="0.01" value="0.05">
+                    <div class="value-display"><span id="trailValue">0.05</span></div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h2>🔄 Presets</h2>
+                <div class="presets">
+                    <div class="preset-btn active" data-preset="text">Text Formation</div>
+                    <div class="preset-btn" data-preset="flock">Flocking</div>
+                    <div class="preset-btn" data-preset="swarm">Swarm</div>
+                    <div class="preset-btn" data-preset="orbit">Orbit</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="explodeBtn">💥 Explode</button>
+                <button id="resetBtn">🔄 Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Main canvas setup
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas to full container size
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Particle system parameters
+        const params = {
+            particleCount: 800,
+            repulsionRadius: 150,
+            attractionStrength: 0.05,
+            friction: 0.95,
+            particleSize: 2,
+            trailEffect: 0.05,
+            preset: 'text'
+        };
+        
+        // Text formation parameters
+        const textParams = {
+            text: "PARTICLES",
+            fontSize: 80,
+            fontFamily: "Arial",
+            spacing: 15
+        };
+        
+        // Mouse position tracking
+        const mouse = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 100,
+            down: false
+        };
+        
+        // Particle class
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.originX = x;
+                this.originY = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = params.particleSize;
+                this.color = `hsl(${Math.random() * 360}, 80%, 60%)`;
+                this.hue = Math.random() * 360;
+                this.speed = Math.random() * 2 + 1;
+            }
+            
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                
+                // Add glow effect
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, this.size,
+                    this.x, this.y, this.size * 2
+                );
+                gradient.addColorStop(0, `hsla(${this.hue}, 100%, 70%, 0.5)`);
+                gradient.addColorStop(1, `hsla(${this.hue}, 100%, 70%, 0)`);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+            
+            update() {
+                // Apply friction
+                this.vx *= params.friction;
+                this.vy *= params.friction;
+                
+                // Mouse repulsion
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < mouse.radius) {
+                    const force = (mouse.radius - distance) / mouse.radius;
+                    const angle = Math.atan2(dy, dx);
+                    this.vx += Math.cos(angle) * force * 5;
+                    this.vy += Math.sin(angle) * force * 5;
+                }
+                
+                // Apply different behaviors based on preset
+                switch(params.preset) {
+                    case 'text':
+                        // Attraction to text formation points
+                        const tx = this.originX - this.x;
+                        const ty = this.originY - this.y;
+                        this.vx += tx * params.attractionStrength * 0.05;
+                        this.vy += ty * params.attractionStrength * 0.05;
+                        break;
+                        
+                    case 'flock':
+                        // Flocking behavior
+                        this.vx += (Math.random() - 0.5) * 0.2;
+                        this.vy += (Math.random() - 0.5) * 0.2;
+                        break;
+                        
+                    case 'swarm':
+                        // Swarm behavior - particles move toward center with noise
+                        const centerX = canvas.width / 2;
+                        const centerY = canvas.height / 2;
+                        const cx = centerX - this.x;
+                        const cy = centerY - this.y;
+                        this.vx += cx * 0.001;
+                        this.vy += cy * 0.001;
+                        this.vx += (Math.random() - 0.5) * 0.3;
+                        this.vy += (Math.random() - 0.5) * 0.3;
+                        break;
+                        
+                    case 'orbit':
+                        // Orbital motion
+                        const angle = Math.atan2(this.y - canvas.height/2, this.x - canvas.width/2);
+                        this.vx += Math.cos(angle + Math.PI/2) * 0.1;
+                        this.vy += Math.sin(angle + Math.PI/2) * 0.1;
+                        break;
+                }
+                
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Color shifting based on velocity
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                this.hue = (this.hue + speed * 0.5) % 360;
+                this.color = `hsl(${this.hue}, 80%, 60%)`;
+                
+                // Boundary checks
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+        }
+        
+        // Create particles
+        let particles = [];
+        
+        function createParticles() {
+            particles = [];
+            
+            if (params.preset === 'text') {
+                createTextParticles();
+            } else {
+                // Random distribution for other presets
+                for (let i = 0; i < params.particleCount; i++) {
+                    const x = Math.random() * canvas.width;
+                    const y = Math.random() * canvas.height;
+                    particles.push(new Particle(x, y));
+                }
+            }
+        }
+        
+        function createTextParticles() {
+            // Clear canvas and set up text drawing
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            
+            // Draw text on temporary canvas
+            tempCtx.fillStyle = 'white';
+            tempCtx.font = `${textParams.fontSize}px ${textParams.fontFamily}`;
+            tempCtx.textAlign = 'center';
+            tempCtx.textBaseline = 'middle';
+            tempCtx.fillText(textParams.text, canvas.width/2, canvas.height/2);
+            
+            // Get image data and create particles
+            const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            let count = 0;
+            for (let y = 0; y < canvas.height; y += textParams.spacing) {
+                for (let x = 0; x < canvas.width; x += textParams.spacing) {
+                    const index = (y * canvas.width + x) * 4;
+                    if (data[index + 3] > 128 && count < params.particleCount) {
+                        particles.push(new Particle(x, y));
+                        count++;
+                    }
+                }
+            }
+            
+            // Fill remaining particles with random positions
+            while (particles.length < params.particleCount) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                particles.push(new Particle(x, y));
+            }
+        }
+        
+        // Mouse event listeners
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('mousedown', () => {
+            mouse.down = true;
+            // Create explosion effect
+            for (let i = 0; i < particles.length; i++) {
+                const dx = particles[i].x - mouse.x;
+                const dy = particles[i].y - mouse.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < mouse.radius * 2) {
+                    const angle = Math.atan2(dy, dx);
+                    const force = (mouse.radius * 2 - distance) / (mouse.radius * 2);
+                    particles[i].vx += Math.cos(angle) * force * 15;
+                    particles[i].vy += Math.sin(angle) * force * 15;
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            mouse.down = false;
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.touches[0].clientX - rect.left;
+            mouse.y = e.touches[0].clientY - rect.top;
+        }, { passive: false });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            mouse.down = true;
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.touches[0].clientX - rect.left;
+            mouse.y = e.touches[0].clientY - rect.top;
+            
+            // Create explosion effect
+            for (let i = 0; i < particles.length; i++) {
+                const dx = particles[i].x - mouse.x;
+                const dy = particles[i].y - mouse.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < mouse.radius * 2) {
+                    const angle = Math.atan2(dy, dx);
+                    const force = (mouse.radius * 2 - distance) / (mouse.radius * 2);
+                    particles[i].vx += Math.cos(angle) * force * 15;
+                    particles[i].vy += Math.sin(angle) * force * 15;
+                }
+            }
+        });
+        
+        canvas.addEventListener('touchend', () => {
+            mouse.down = false;
+        });
+        
+        // Control panel event listeners
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            params.particleCount = parseInt(e.target.value);
+            document.getElementById('countValue').textContent = params.particleCount;
+            createParticles();
+        });
+        
+        document.getElementById('repulsion').addEventListener('input', (e) => {
+            params.repulsionRadius = parseInt(e.target.value);
+            document.getElementById('repulsionValue').textContent = params.repulsionRadius;
+            mouse.radius = params.repulsionRadius;
+        });
+        
+        document.getElementById('attraction').addEventListener('input', (e) => {
+            params.attractionStrength = parseInt(e.target.value) / 100;
+            document.getElementById('attractionValue').textContent = parseInt(e.target.value);
+        });
+        
+        document.getElementById('friction').addEventListener('input', (e) => {
+            params.friction = parseFloat(e.target.value);
+            document.getElementById('frictionValue').textContent = params.friction.toFixed(3);
+        });
+        
+        document.getElementById('size').addEventListener('input', (e) => {
+            params.particleSize = parseFloat(e.target.value);
+            document.getElementById('sizeValue').textContent = params.particleSize;
+            // Update all particles
+            particles.forEach(p => p.size = params.particleSize);
+        });
+        
+        document.getElementById('trail').addEventListener('input', (e) => {
+            params.trailEffect = parseFloat(e.target.value);
+            document.getElementById('trailValue').textContent = params.trailEffect.toFixed(2);
+        });
+        
+        // Preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                params.preset = btn.dataset.preset;
+                createParticles();
+            });
+        });
+        
+        // Action buttons
+        document.getElementById('explodeBtn').addEventListener('click', () => {
+            // Create explosion effect at center
+            for (let i = 0; i < particles.length; i++) {
+                const dx = particles[i].x - canvas.width/2;
+                const dy = particles[i].y - canvas.height/2;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+                particles[i].vx += Math.cos(angle) * 10;
+                particles[i].vy += Math.sin(angle) * 10;
+            }
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            createParticles();
+        });
+        
+        // Initialize particles
+        createParticles();
+        
+        // Animation loop
+        function animate() {
+            // Apply trail effect
+            ctx.fillStyle = `rgba(15, 12, 41, ${params.trailEffect})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update and draw particles
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+            
+            // Draw mouse influence area when pressed
+            if (mouse.down) {
+                ctx.beginPath();
+                ctx.arc(mouse.x, mouse.y, mouse.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 126, 95, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>

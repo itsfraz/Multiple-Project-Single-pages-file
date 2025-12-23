@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <title>What to Eat Today - Premium Indian Food Spinner</title>
+    <meta name="description" content="Spin the wheel to decide your delicious Indian meal today. A premium, physics-based food picker experience.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #FF8E53;
+            --accent: #4ECDC4;
+            --dark: #2D3436;
+            --light: #F7F9FC;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.08);
+            --shadow-deep: 0 25px 50px -12px rgba(0,0,0,0.15);
+            --font-main: 'Inter', sans-serif;
+            --font-display: 'Playfair Display', serif;
+            
+            /* Responsive Wheel Size Logic */
+            --max-wheel-size: 500px;
+            --wheel-size: min(92vw, var(--max-wheel-size));
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: #f0f2f5;
+            min-height: 100vh;
+            color: var(--dark);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 10% 10%, rgba(255, 107, 107, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 90% 90%, rgba(78, 205, 196, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 142, 83, 0.04) 0%, transparent 50%);
+            filter: blur(80px);
+        }
+
+        .main-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Responsive Header */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 10;
+            padding: 0 1rem;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            /* Fluid typography: matches small screens to large screens */
+            font-size: clamp(2rem, 6vw, 3.5rem); 
+            line-height: 1.1;
+            background: linear-gradient(135deg, var(--dark) 0%, #636e72 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: #636e72;
+            font-size: clamp(0.95rem, 3vw, 1.1rem);
+            font-weight: 500;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Main Grid Layout */
+        .content-grid {
+            display: flex;
+            flex-direction: column; /* Mobile first: stack vertically */
+            gap: 2.5rem;
+            width: 100%;
+            align-items: center;
+        }
+
+        /* Desktop Layout switch */
+        @media (min-width: 968px) {
+            .content-grid {
+                display: grid;
+                grid-template-columns: 1.2fr 0.8fr;
+                gap: 4rem;
+                align-items: center; /* Center vertically */
+            }
+            
+            .main-wrapper {
+                 justify-content: center; /* Center entire app on large screens */
+                 padding-bottom: 3rem;
+            }
+        }
+
+        /* --- Wheel Component --- */
+        .wheel-section {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            /* Prevent clip during 3D tilts */
+            perspective: 1000px;
+            padding: 1rem 0; 
+        }
+
+        .wheel-outer-rim {
+            position: relative;
+            /* Responsive sizes */
+            width: var(--wheel-size);
+            height: var(--wheel-size);
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.05),
+                var(--shadow-deep),
+                0 0 0 10px rgba(255,255,255,0.4); /* Scalable border look */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+            /* Essential for touch devices to avoid scrolling while spinning if desired, 
+               but we rely on button click. */
+            user-select: none;
+        }
+
+        .wheel-canvas-container {
+            width: 93%;
+            height: 93%;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            mask-image: radial-gradient(white, black);
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
+            /* Hardware acceleration fix */
+            transform: translateZ(0);
+        }
+
+        canvas#wheelCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* --- Responsive Pointer --- */
+        .pointer-container {
+            position: absolute;
+            top: -5%; /* Relative positioning */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+            transform-origin: top center;
+            /* Proportional size so it doesn't look giant on mobile */
+            width: 10%; 
+            height: 14%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pointer-body {
+            width: 100%;
+            height: 100%;
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            background: linear-gradient(to bottom, var(--primary), #D94545);
+        }
+
+        .pointer-cap {
+            width: 30%;
+            height: 22%; /* Aspect ratio preserve roughly */
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: -10%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* --- Responsive Center Hub --- */
+        .center-hub {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            /* Percentage based sizing for perfect scaling */
+            width: 18%;
+            height: 18%;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 0.2rem solid rgba(245,245,245,0.9);
+        }
+
+        .spin-btn {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-family: var(--font-main);
+            font-weight: 700;
+            /* Fluid font inside button */
+            font-size: clamp(0.7rem, 2.5vw, 1rem); 
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            outline: none;
+            /* Touch adjustments */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .spin-btn:hover { transform: scale(1.05); }
+        .spin-btn:active { transform: scale(0.95); }
+        .spin-btn:disabled { 
+            background: #b2bec3; 
+            box-shadow: none; 
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* --- Info Panel & Cards --- */
+        .info-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            width: 100%;
+            /* Ensure it doesn't get too wide on mobile/tablet */
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .result-card {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: linear-gradient(145deg, #ffffff, #f7f9fc);
+            border-radius: 16px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.03);
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .result-emoji {
+            font-size: clamp(3rem, 10vw, 4rem);
+            margin-bottom: 0.5rem;
+            transform: scale(0);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .result-emoji.show { transform: scale(1); }
+
+        .result-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #b2bec3;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+
+        .result-dish {
+            font-family: var(--font-display);
+            font-size: clamp(1.5rem, 6vw, 2.25rem);
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1.2;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s ease 0.1s;
+        }
+        .result-dish.show { opacity: 1; transform: translateY(0); }
+
+        /* Action Buttons */
+        .control-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn-action {
+            padding: 0.9rem;
+            border: none;
+            border-radius: 14px;
+            background: white;
+            color: var(--dark);
+            font-weight: 600;
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.04);
+            /* Better touch targets */
+            min-height: 50px; 
+            touch-action: manipulation;
+        }
+        
+        .btn-action:active { transform: translateY(1px); background: #f1f1f1; }
+        .btn-action.active { 
+            color: var(--primary); 
+            background: #fff5f5; 
+            border-color: rgba(255, 107, 107, 0.2); 
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.6);
+            padding: 0.75rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .stat-lbl {
+            font-size: 0.75rem;
+            color: #636e72;
+            margin-top: 0.2rem;
+        }
+
+        /* History */
+        .history-section {
+            margin-top: 0.5rem;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            color: #636e72;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0 0.25rem;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 2px;
+            /* Scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #dcdde1 transparent;
+        }
+
+        .history-item {
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            animation: slideInRight 0.4s ease forwards;
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        
+        /* Animation delays */
+        .history-item:nth-child(1) { animation-delay: 0.05s; }
+        .history-item:nth-child(2) { animation-delay: 0.1s; }
+        .history-item:nth-child(3) { animation-delay: 0.15s; }
+
+        .h-emoji { font-size: 1.25rem; }
+        .h-info { flex: 1; overflow: hidden; }
+        .h-name { 
+            font-size: 0.9rem; 
+            font-weight: 500; 
+            color: var(--dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; 
+        }
+        .h-time { font-size: 0.7rem; color: #b2bec3; }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: max(30px, env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+            width: 90%;
+            max-width: 350px;
+        }
+
+        .toast {
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(4px);
+            color: white;
+            padding: 14px 20px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        @keyframes slideInRight {
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Small screen adjustments */
+        @media (max-width: 360px) {
+            .result-card { min-height: 140px; padding: 1.5rem 0.5rem; }
+            .btn-action { font-size: 0.85rem; padding: 0.75rem; }
+            .history-item { padding: 0.5rem 0.75rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+
+    <div class="main-wrapper">
+        <header>
+            <h1>What To Eat Today?</h1>
+            <p class="subtitle">Spin the wheel to decide your next meal</p>
+        </header>
+
+        <main class="content-grid">
+            <!-- Wheel Section: Scalable and Touch Friendly -->
+            <section class="wheel-section">
+                <div class="wheel-outer-rim" id="wheelOuter">
+                    <div class="pointer-container" id="pointerRef">
+                        <div class="pointer-body"></div>
+                        <div class="pointer-cap"></div>
+                    </div>
+                    
+                    <div class="wheel-canvas-container">
+                        <canvas id="wheelCanvas"></canvas>
+                    </div>
+
+                    <div class="center-hub">
+                        <button class="spin-btn" id="spinBtn" aria-label="Spin the wheel">SPIN</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Responsive Info Panel -->
+            <aside class="info-panel">
+                <div class="result-card" id="resultCard">
+                    <div class="result-title">Winner</div>
+                    <div class="result-emoji" id="resultEmoji">🍽️</div>
+                    <div class="result-dish" id="resultDish">Ready?</div>
+                </div>
+
+                <div class="control-group">
+                    <button class="btn-action" id="favBtn" aria-label="Add to favorites">
+                        <span>❤️</span> Like
+                    </button>
+                    <button class="btn-action" id="shareBtn" aria-label="Share result">
+                        <span>📤</span> Share
+                    </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-val" id="totalSpins">0</div>
+                        <div class="stat-lbl">Spins</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val" id="uniqueDishes">0</div>
+                        <div class="stat-lbl">Dishes</div>
+                    </div>
+                </div>
+
+                <div class="history-section">
+                    <div class="history-header">
+                        <span>History</span>
+                        <button id="clearHistoryBtn" style="background:none; border:none; color:#FF6B6B; font-weight:600; cursor:pointer; font-size:0.75rem; padding: 4px;">Clear</button>
+                    </div>
+                    <div class="history-list" id="historyList">
+                        <div style="text-align: center; color: #b2bec3; padding: 1rem; font-size: 0.85rem;">
+                            No recent spins
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        /**
+         * Configuration & Data
+         */
+        const CONFIG = {
+            friction: 0.992,
+            colors: ['#FF6B6B', '#FF8E53', '#FFA07A', '#FFD93D', '#6BCB77', '#4ECDC4', '#45B7D1', '#A06CD5'],
+            dishes: [
+                { name: 'Paneer Butter Masala', emoji: '🍛', color: '#FF6B6B' },
+                { name: 'Chole Bhature', emoji: '🍲', color: '#FF9F43' },
+                { name: 'Hyderabadi Biryani', emoji: '🍚', color: '#54A0FF' },
+                { name: 'Dal Makhani', emoji: '🥘', color: '#5F27CD' },
+                { name: 'Butter Chicken', emoji: '🍗', color: '#FF6B6B' },
+                { name: 'Masala Dosa', emoji: '🥞', color: '#FECA57' },
+                { name: 'Samosa Chaat', emoji: '🥟', color: '#48DBFB' },
+                { name: 'Rogan Josh', emoji: '🍖', color: '#FF9FF3' },
+                { name: 'Palak Paneer', emoji: '🥬', color: '#1DD1A1' },
+                { name: 'Pav Bhaji', emoji: '🍞', color: '#F368E0' },
+                { name: 'Aloo Paratha', emoji: '🥙', color: '#Feca57' },
+                { name: 'Rajma Chawal', emoji: '🥘', color: '#D980FA' }
+            ]
+        };
+
+        /**
+         * State
+         */
+        const state = {
+            angle: 0,
+            velocity: 0,
+            isSpinning: false,
+            lastTickIndex: -1,
+            favorites: JSON.parse(localStorage.getItem('wte_favorites') || '[]'),
+            stats: JSON.parse(localStorage.getItem('wte_stats') || '{"total": 0, "unique": []}'),
+            history: JSON.parse(localStorage.getItem('wte_history') || '[]')
+        };
+
+        /**
+         * DOM Elements
+         */
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const pointerRef = document.getElementById('pointerRef');
+        const wheelOuter = document.getElementById('wheelOuter');
+
+        // UI
+        const resultEmoji = document.getElementById('resultEmoji');
+        const resultDish = document.getElementById('resultDish');
+        const resultCard = document.getElementById('resultCard');
+        const historyList = document.getElementById('historyList');
+        const totalSpinsEl = document.getElementById('totalSpins');
+        const uniqueDishesEl = document.getElementById('uniqueDishes');
+        const favBtn = document.getElementById('favBtn');
+        const toastContainer = document.getElementById('toastContainer');
+
+        /**
+         * Responsive Resize System
+         */
+        let centerX, centerY, radius;
+
+        function resize() {
+            // Get the computed size of the outer rim (controlled by CSS)
+            // This ensures JS aligns perfectly with CSS layout
+            const rect = wheelOuter.getBoundingClientRect();
+            
+            // Note: wheel-canvas-container is 93% of rim
+            const canvasSize = rect.width * 0.93;
+            
+            // High DPI scaling
+            const dpr = window.devicePixelRatio || 1;
+            
+            canvas.width = canvasSize * dpr;
+            canvas.height = canvasSize * dpr;
+            
+            ctx.scale(dpr, dpr);
+            
+            centerX = canvasSize / 2;
+            centerY = canvasSize / 2;
+            radius = canvasSize / 2;
+            
+            drawWheel();
+        }
+
+        // Debounced resize to prevent thrashing
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(resize, 100);
+        });
+
+        /**
+         * Wheel Rendering
+         */
+        function drawWheel() {
+            if (!ctx) return;
+            
+            // Clear previous frame
+            ctx.clearRect(0, 0, centerX * 2, centerY * 2);
+
+            const segmentAngle = (2 * Math.PI) / CONFIG.dishes.length;
+
+            CONFIG.dishes.forEach((dish, i) => {
+                const startAngle = state.angle + (i * segmentAngle);
+                const endAngle = startAngle + segmentAngle;
+
+                // Segment
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = dish.color;
+                ctx.fill();
+
+                // Depth Gradient (Subtle)
+                const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                grad.addColorStop(0.6, 'rgba(0,0,0,0)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.08)');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                
+                // Border between segments
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Text Rendering (Responsive Logic)
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + segmentAngle / 2);
+                
+                // Calculate font size proportional to radius
+                // Standard: radius 225px -> font 13px. Ration approx 0.06
+                const fontSize = Math.max(10, radius * 0.058); 
+                
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#fff';
+                ctx.font = `600 ${fontSize}px "Inter", sans-serif`;
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 3;
+                
+                // Offset text from edge (approx 15% of radius)
+                ctx.fillText(dish.name, radius * 0.85, 0);
+                
+                ctx.restore();
+            });
+
+            // Center Shine
+            const shine = ctx.createRadialGradient(centerX - radius/3, centerY - radius/3, radius/5, centerX, centerY, radius);
+            shine.addColorStop(0, 'rgba(255,255,255,0.1)');
+            shine.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = shine;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        /**
+         * Animation & Physics
+         */
+        let animFrame;
+
+        function animate() {
+            if (!state.isSpinning && state.velocity < 0.002) return;
+
+            if (state.isSpinning) {
+                state.velocity *= CONFIG.friction;
+                if (state.velocity < 0.002) {
+                    stopSpin();
+                    return;
+                }
+            }
+
+            state.angle += state.velocity;
+            state.angle %= (2 * Math.PI);
+
+            // Tick Sound/Haptic
+            const segmentAngle = (2 * Math.PI) / CONFIG.dishes.length;
+            // Calculate current index under pointer (Pointer is at -90deg/270deg)
+            // Normalized angle math:
+            const normalize = (val) => ((val % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            const currentAngle = normalize(state.angle);
+            // Which index is at the top?
+            // The logic: Angle 0 starts at East (0). Top is 270 (3PI/2).
+            // Rotation rotates the whole coordinate system.
+            let idx = Math.floor(normalize((3 * Math.PI / 2) - currentAngle) / segmentAngle);
+            idx = idx % CONFIG.dishes.length;
+
+            if (idx !== state.lastTickIndex) {
+                state.lastTickIndex = idx;
+                triggerTick();
+            }
+
+            drawWheel();
+            animFrame = requestAnimationFrame(animate);
+        }
+
+        function triggerTick() {
+            // Visual bounce
+            const bounce = Math.min(state.velocity * 40, 15);
+            pointerRef.style.transform = `translateX(-50%) rotate(${-bounce}deg)`;
+            
+            // Haptics (Check support)
+            if (navigator.vibrate && state.velocity > 0.05) {
+                try { navigator.vibrate(8); } catch(e){}
+            }
+
+            setTimeout(() => {
+                pointerRef.style.transform = `translateX(-50%) rotate(0deg)`;
+            }, 60);
+        }
+
+        /**
+         * Controls
+         */
+        function startSpin() {
+            if (state.isSpinning) return;
+            
+            resetUI();
+            state.isSpinning = true;
+            spinBtn.disabled = true;
+            spinBtn.textContent = "...";
+            
+            // Variable start speed
+            state.velocity = 0.4 + Math.random() * 0.35;
+            
+            requestAnimationFrame(animate);
+        }
+
+        function stopSpin() {
+            state.isSpinning = false;
+            state.velocity = 0;
+            cancelAnimationFrame(animFrame);
+            
+            spinBtn.disabled = false;
+            spinBtn.textContent = "SPIN";
+            
+            // Exact winner calculation
+            const segmentAngle = (2 * Math.PI) / CONFIG.dishes.length;
+            const normalize = (val) => ((val % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            const currentAngle = normalize(state.angle);
+            
+            let winningIndex = Math.floor(normalize((3 * Math.PI / 2) - currentAngle) / segmentAngle);
+            winningIndex = winningIndex % CONFIG.dishes.length;
+            
+            const winningDish = CONFIG.dishes[winningIndex];
+            revealResult(winningDish);
+        }
+
+        /**
+         * Visualization & Result
+         */
+        function resetUI() {
+            resultCard.style.transform = "scale(0.98)";
+            resultCard.style.opacity = "0.8";
+            resultEmoji.classList.remove('show');
+            resultDish.classList.remove('show');
+            resultDish.textContent = "Spinning...";
+            resultEmoji.textContent = "🎲";
+            resultEmoji.classList.add('show');
+            favBtn.classList.remove('active');
+            favBtn.innerHTML = "<span>❤️</span> Like";
+        }
+
+        function revealResult(dish) {
+            resultCard.style.transform = "scale(1)";
+            resultCard.style.opacity = "1";
+            
+            resultEmoji.textContent = dish.emoji;
+            resultDish.textContent = dish.name;
+            
+            // Re-trigger animation
+            resultEmoji.classList.remove('show');
+            resultDish.classList.remove('show');
+            void resultEmoji.offsetWidth; // Force reflow
+            resultEmoji.classList.add('show');
+            resultDish.classList.add('show');
+
+            updateHistory(dish);
+            updateStats(dish);
+            checkFavorite(dish.name);
+            
+            if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+        }
+
+        /**
+         * User Data & Interaction
+         */
+        function updateHistory(dish) {
+            const now = new Date();
+            state.history.unshift({
+                name: dish.name,
+                emoji: dish.emoji,
+                time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+            });
+            if (state.history.length > 20) state.history.pop();
+            localStorage.setItem('wte_history', JSON.stringify(state.history));
+            renderHistory();
+        }
+
+        function updateStats(dish) {
+            state.stats.total++;
+            if (!state.stats.unique.includes(dish.name)) {
+                state.stats.unique.push(dish.name);
+            }
+            localStorage.setItem('wte_stats', JSON.stringify(state.stats));
+            renderStats();
+        }
+
+        function checkFavorite(name) {
+            if (state.favorites.includes(name)) {
+                favBtn.classList.add('active');
+                favBtn.innerHTML = "<span>❤️</span> Liked";
+            }
+        }
+
+        function toggleFavorite() {
+            const name = resultDish.textContent;
+            if (!name || name === "Ready?" || name === "Spinning...") return;
+            
+            const idx = state.favorites.indexOf(name);
+            if (idx === -1) {
+                state.favorites.push(name);
+                favBtn.classList.add('active');
+                favBtn.innerHTML = "<span>❤️</span> Liked";
+                showToast(`❤️ Added ${name} to favorites`);
+            } else {
+                state.favorites.splice(idx, 1);
+                favBtn.classList.remove('active');
+                favBtn.innerHTML = "<span>❤️</span> Like";
+                showToast(`💔 Removed from favorites`);
+            }
+            localStorage.setItem('wte_favorites', JSON.stringify(state.favorites));
+        }
+
+        async function shareResult() {
+            const name = resultDish.textContent;
+            if (!name || name === "Ready?" || name === "Spinning...") return;
+            
+            const text = `I'm eating ${name} today! 🍛 Spinner Decision.`;
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title: 'What To Eat', text: text, url: window.location.href });
+                } catch(e) {}
+            } else {
+                navigator.clipboard.writeText(text);
+                showToast("📋 Copied to clipboard");
+            }
+        }
+
+        function showToast(msg) {
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.innerHTML = msg;
+            toastContainer.appendChild(el);
+            requestAnimationFrame(() => el.classList.add('visible'));
+            setTimeout(() => {
+                el.classList.remove('visible');
+                setTimeout(() => el.remove(), 400);
+            }, 2500);
+        }
+
+        function renderStats() {
+            totalSpinsEl.textContent = state.stats.total;
+            uniqueDishesEl.textContent = state.stats.unique.length;
+        }
+
+        function renderHistory() {
+            if (state.history.length === 0) {
+                historyList.innerHTML = `<div style="text-align:center; color:#b2bec3; padding:1rem; font-size:0.85rem">No recent spins</div>`;
+                return;
+            }
+            historyList.innerHTML = state.history.map((item, i) => `
+                <div class="history-item" style="animation-delay: ${Math.min(i*0.05, 0.3)}s">
+                    <span class="h-emoji">${item.emoji}</span>
+                    <div class="h-info">
+                        <div class="h-name">${item.name}</div>
+                        <div class="h-time">${item.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Initialization
+         */
+        function init() {
+            spinBtn.addEventListener('click', startSpin);
+            favBtn.addEventListener('click', toggleFavorite);
+            document.getElementById('shareBtn').addEventListener('click', shareResult);
+            document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+                if(confirm('Clear history?')) {
+                    state.history = [];
+                    localStorage.setItem('wte_history', '[]');
+                    renderHistory();
+                    showToast("History cleared");
+                }
+            });
+            
+            resize(); // Initial draw
+            renderStats();
+            renderHistory();
+
+            // Mobile Tilt/Scroll Fix
+            document.body.addEventListener('touchmove', (e) => {
+                if (state.isSpinning) e.preventDefault();
+            }, { passive: false });
+        }
+
+        // Boot
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+    </script>
+</body>
+</html>

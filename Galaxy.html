@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AstroLab | Interactive Astrophysics Simulator</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jura:wght@300;500;700&family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- ACADEMIC / SCI-FI THEME --- */
+        :root {
+            --ui-bg: rgba(12, 18, 30, 0.85);
+            --ui-border: rgba(100, 200, 255, 0.2);
+            --accent: #00f2fe;
+            --accent-glow: rgba(0, 242, 254, 0.4);
+            --danger: #ff4b4b;
+            --success: #26ff93;
+            --warning: #ffcc00;
+            --font-display: 'Jura', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            overflow: hidden;
+            background: #000;
+            color: #eee;
+            font-family: var(--font-body);
+            height: 100vh; width: 100vw;
+            user-select: none;
+        }
+
+        #canvas-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1;
+        }
+
+        /* --- UI LAYOUT --- */
+        #ui-layer {
+            position: absolute; inset: 0; z-index: 10; pointer-events: none;
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: 60px 1fr 140px;
+            padding: 15px;
+            gap: 15px;
+        }
+
+        /* PANELS */
+        .panel {
+            background: var(--ui-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--ui-border);
+            border-radius: 8px;
+            pointer-events: auto;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            transform-origin: center;
+            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        
+        /* HEADER */
+        .header {
+            grid-column: 1 / -1; grid-row: 1;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px;
+            background: linear-gradient(90deg, rgba(0,242,254,0.1), transparent);
+            border-bottom: 1px solid var(--ui-border);
+        }
+        .brand {
+            font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; letter-spacing: 2px;
+            color: #fff; text-transform: uppercase; display: flex; align-items: center; gap: 10px;
+        }
+        .mode-selector {
+            display: flex; gap: 5px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 20px;
+        }
+        .mode-btn {
+            background: none; border: none; padding: 6px 15px; border-radius: 15px;
+            color: #888; font-family: var(--font-mono); font-size: 0.8rem; cursor: pointer; transition: 0.2s;
+        }
+        .mode-btn.active { background: var(--accent); color: #000; font-weight: bold; box-shadow: 0 0 10px var(--accent-glow); }
+
+        /* LEFT SIDEBAR - LESSON / TOOLS */
+        .sidebar {
+            grid-column: 1; grid-row: 2 / 4;
+            padding: 15px; gap: 20px;
+            overflow-y: auto; /* Enable scrolling */
+        }
+        .section-title {
+            font-family: var(--font-mono); color: var(--accent); font-size: 0.8rem; letter-spacing: 1px;
+            margin-bottom: 10px; border-bottom: 1px solid var(--ui-border); padding-bottom: 5px;
+        }
+        
+        .tool-group { display: flex; flex-direction: column; gap: 10px; }
+        .tool-btn {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: #ccc; padding: 10px; border-radius: 4px; text-align: left;
+            cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s;
+        }
+        .tool-btn:hover { background: rgba(0,242,254,0.1); border-color: var(--accent); color: #fff; }
+        .tool-btn i { width: 20px; text-align: center; color: var(--accent); }
+
+        /* RIGHT SIDEBAR - PHYSICS / DATA */
+        .physics-panel {
+            grid-column: 3; grid-row: 2 / 4;
+            padding: 15px; overflow-y: auto;
+        }
+        
+        .slider-group { margin-bottom: 20px; }
+        .slider-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem; color: #aaa; }
+        .slider-val { font-family: var(--font-mono); color: var(--accent); }
+        input[type="range"] {
+            width: 100%; -webkit-appearance: none; background: transparent;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
+            background: var(--accent); margin-top: -5px; box-shadow: 0 0 10px var(--accent); cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;
+        }
+
+        /* BOTTOM BAR - TIMELINE Controls */
+        .timeline {
+            grid-column: 1 / -1; grid-row: 3; /* Span full width for true centering */
+            justify-self: center;
+            align-self: end;
+            
+            display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px;
+            
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+            border: 1px solid var(--ui-border);
+            border-radius: 50px; padding: 10px 30px;
+            width: auto; margin-bottom: 25px;
+            z-index: 100; pointer-events: auto;
+        }
+        .time-btn {
+            background: none; border: 1px solid var(--ui-border); color: #fff;
+            width: 45px; height: 45px; border-radius: 50%; cursor: pointer;
+            transition: 0.2s; display: flex; justify-content: center; align-items: center;
+            flex-shrink: 0; /* Prevent crushing */
+        }
+        .time-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.1); }
+        .time-btn.active { background: var(--accent); color: #000; border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
+
+        /* OVERLAYS */
+        .lesson-overlay {
+            position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
+            width: 500px; background: rgba(0,0,0,0.9); border: 2px solid var(--accent);
+            padding: 25px; border-radius: 12px;
+            text-align: center; pointer-events: auto;
+            display: none;
+        }
+        .lesson-overlay.active { display: block; animation: fadeIn 0.5s; }
+        .lesson-text { font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px; }
+        .lesson-nav { display: flex; justify-content: space-between; }
+        
+        .tooltip {
+            position: absolute; background: rgba(0,0,0,0.8); border: 1px solid var(--ui-border);
+            padding: 10px; border-radius: 4px; font-size: 0.8rem; pointer-events: none;
+            opacity: 0; transition: opacity 0.2s; z-index: 100; max-width: 200px;
+        }
+
+        .assessment-modal {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100; visibility: hidden; opacity: 0; transition: 0.3s;
+        }
+        .assessment-modal.active { visibility: visible; opacity: 1; }
+        .card-modal {
+            background: #111; border: 1px solid var(--ui-border); padding: 30px; border-radius: 16px;
+            width: 400px; text-align: center; box-shadow: 0 0 50px rgba(0,242,254,0.1);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+        /* MOBILE FIXES */
+        @media (max-width: 900px) {
+            #ui-layer {
+                grid-template-columns: 1fr; grid-template-rows: 60px auto 1fr auto;
+                padding: 10px; pointer-events: none;
+            }
+            .sidebar { grid-row: 2; height: auto; max-height: 200px; width: 100%; pointer-events: auto; }
+            .physics-panel { grid-row: 3; width: 100%; max-height: 250px; pointer-events: auto; }
+            .timeline { grid-row: 4; width: 100%; margin-bottom: 10px; pointer-events: auto; }
+            .lesson-overlay { width: 90%; top: 80px; }
+            .hide-mobile { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D CONTAINER -->
+    <div id="canvas-container"></div>
+    
+    <!-- TOOLTIP -->
+    <div id="tooltip" class="tooltip">Data</div>
+
+    <!-- UI LAYER -->
+    <div id="ui-layer">
+        <!-- HEADER -->
+        <header class="panel header">
+            <div class="brand">
+                <i class="fas fa-atom fa-spin"></i> AstroLab <span style="font-size:0.8rem; opacity:0.6; margin-top:5px;">EDU v2.0</span>
+            </div>
+            <div class="mode-selector">
+                <button class="mode-btn active" onclick="setMode('explore')">EXPLORE</button>
+                <button class="mode-btn" onclick="setMode('lesson')">LESSON</button>
+                <button class="mode-btn" onclick="setMode('lab')">LAB</button>
+                <button class="mode-btn" onclick="setMode('quiz')">QUIZ</button>
+            </div>
+        </header>
+
+        <!-- LEFT SIDEBAR -->
+        <aside class="panel sidebar">
+            <div class="section-title">VISUALIZATION TOOLS</div>
+            <div class="tool-group">
+                <button class="tool-btn" onclick="toggleView('galaxy')">
+                    <i class="fas fa-globe-asia"></i> <span>Galaxy View</span>
+                </button>
+                <button class="tool-btn" onclick="toggleOverlay('orbits')">
+                    <i class="fas fa-circle-notch"></i> <span>Show Orbits</span>
+                </button>
+                <button class="tool-btn" onclick="toggleOverlay('forces')">
+                    <i class="fas fa-long-arrow-alt-up"></i> <span>Force Vectors</span>
+                </button>
+                <button class="tool-btn" onclick="toggleOverlay('habitable')">
+                    <i class="fas fa-leaf"></i> <span>Habitable Zone</span>
+                </button>
+            </div>
+            
+            <div class="section-title" style="margin-top:20px;">SYSTEM DATA</div>
+            <div id="inspector-data" style="font-family: var(--font-mono); font-size: 0.8rem; color: #888; line-height: 1.8;">
+                Select a planet to view data.
+            </div>
+        </aside>
+
+        <!-- RIGHT SIDEBAR (PHYSICS) -->
+        <aside class="panel physics-panel">
+            <div class="section-title">PHYSICS ENGINE</div>
+            
+            <div class="slider-group">
+                <div class="slider-header"><span>Universal Gravity (G)</span> <span class="slider-val" id="val-g">1.0x</span></div>
+                <input type="range" min="0.1" max="5.0" step="0.1" value="1.0" oninput="updatePhysics('G', this.value)">
+                <div style="font-size: 0.7rem; color:#666; margin-top:5px;">Warning: High G may destabilize orbits.</div>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header"><span>Simulation Speed</span> <span class="slider-val" id="val-speed">1.0x</span></div>
+                <input type="range" min="0" max="100" step="1" value="10" oninput="updatePhysics('speed', this.value)">
+            </div>
+            
+            <div class="section-title" id="edit-title" style="margin-top:20px; display:none; justify-content: space-between; align-items: center;">
+                <span>EDIT CURRENT PLANET</span>
+                <button onclick="setMode('explore')" title="Close Lab" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size: 1rem; padding: 0 5px;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="planet-controls" style="display: none;">
+                <div class="slider-group">
+                    <div class="slider-header"><span>Mass</span> <span class="slider-val" id="val-mass">1.0</span></div>
+                    <input type="range" id="inp-mass" min="0.1" max="5" step="0.1" value="1" oninput="editPlanet('mass', this.value)">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-header"><span>Orbit Radius</span> <span class="slider-val" id="val-dist">1.0</span></div>
+                    <input type="range" id="inp-dist" min="50" max="1000" step="10" value="100" oninput="editPlanet('dist', this.value)">
+                </div>
+            </div>
+        </aside>
+
+        <!-- TIMELINE CONTROLS -->
+        <div class="panel timeline">
+            <button class="time-btn" onclick="setPause(true)"><i class="fas fa-pause"></i></button>
+            <button class="time-btn active" onclick="setPause(false)"><i class="fas fa-play"></i></button>
+            <button class="time-btn" onclick="resetSim()"><i class="fas fa-undo"></i></button>
+        </div>
+    </div>
+
+    <!-- LESSON OVERLAY -->
+    <div id="lesson-card" class="lesson-overlay">
+        <h3 id="lesson-title" style="color:var(--accent); font-family:var(--font-display); margin-bottom:10px;">Welcome to the Solar System</h3>
+        <p id="lesson-body" class="lesson-text">
+            This module explores how gravity shapes our universe. We will start by observing the delicate balance between velocity and gravitational production.
+        </p>
+        <div class="lesson-nav">
+            <button class="mode-btn" onclick="prevLesson()">PREV</button>
+            <div style="color:var(--ui-border)" id="lesson-step">1 / 5</div>
+            <button class="mode-btn active" onclick="nextLesson()">NEXT</button>
+        </div>
+    </div>
+
+    <!-- ASSESSMENT MODAL -->
+    <div id="quiz-modal" class="assessment-modal">
+        <div class="card-modal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 style="color:var(--warning); margin:0;">CHALLENGE MODE</h2>
+                <button onclick="setMode('explore')" title="Close Quiz" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size: 1.2rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p style="margin-bottom:20px; color:#ccc;">
+                <strong>Mission:</strong> Create a stable orbit for the new planet "Novus".
+            </p>
+            <p style="font-size:0.9rem; color:#888; margin-bottom:20px;">
+                Adjust velocity to counteract gravity. If too slow, it crashes. If too fast, it escapes.
+            </p>
+            <div class="slider-group" style="text-align:left;">
+                <div class="slider-header"><span>Initial Velocity</span> <span class="slider-val" id="quiz-v-val">15 km/s</span></div>
+                <input type="range" min="5" max="30" step="0.5" value="15" oninput="updateQuizVal(this.value)">
+            </div>
+            <button class="mode-btn active" style="width:100%; padding:15px; margin-top:10px;" onclick="runQuizSimulation()">LAUNCH SIMULATION</button>
+            <div id="quiz-result" style="margin-top:15px; height:20px; font-weight:bold;"></div>
+        </div>
+    </div>
+
+    <!-- LIBRARIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <!-- Post Processing -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+
+    <script>
+        /**
+         * ASTROLAB ENGINE 2.0
+         * Integrating Graphics, Physics, and Pedagogy.
+         */
+
+        // --- STATE MANAGEMENT ---
+        const State = {
+            mode: 'explore', // explore, lesson, lab, quiz
+            paused: false,
+            G: 1.0,
+            simSpeed: 10,
+            view: 'system', // system, galaxy
+            overlays: { orbits: true, forces: false, habitable: false },
+            selectedPlanet: null,
+            lessonStep: 0,
+            t: 0
+        };
+
+        const PLANETS_DATA = [
+
+            { id: 'mercury', name: "Mercury", r: 3.8, dist: 60,  color: 0xA5A5A5, speed: 0.040, type: 'Terrestrial', temp: '430°C / -180°C', day: '59d', year: '88d', moons: 0, desc: "The smallest planet in our solar system and closest to the Sun. It is only slightly larger than Earth's Moon." },
+            { id: 'venus',   name: "Venus",   r: 9.5, dist: 90,  color: 0xE39E54, speed: 0.025, type: 'Terrestrial', temp: '462°C', day: '243d', year: '225d', moons: 0, desc: "Spins slowly in the opposite direction from most planets. Its thick atmosphere traps heat in a runaway greenhouse effect." },
+            { id: 'earth',   name: "Earth",   r: 10,  dist: 130, color: 0x2233FF, speed: 0.020, type: 'Terrestrial', temp: '15°C', day: '24h', year: '365d', moons: 1, desc: "Our home planet is the only place we know of so far that’s inhabited by living things. It's also the only planet with liquid water on the surface.",
+              satellites: [{ name: "Moon", r: 2.7, dist: 18, color: 0xcccccc, speed: 0.05 }] 
+            },
+            { id: 'mars',    name: "Mars",    r: 5.3, dist: 170, color: 0xE04400, speed: 0.016, type: 'Terrestrial', temp: '-60°C', day: '24.6h', year: '687d', moons: 2, desc: "A dusty, cold, desert world with a very thin atmosphere. There is strong evidence that Mars was—billions of years ago—wetter and warmer.",
+              satellites: [
+                  { name: "Phobos", r: 0.8, dist: 9, color: 0x887766, speed: 0.15 },
+                  { name: "Deimos", r: 0.5, dist: 14, color: 0x998877, speed: 0.10 }
+              ]
+            },
+            { id: 'jupiter', name: "Jupiter", r: 25,  dist: 280, color: 0xD8CA9D, speed: 0.008, type: 'Gas Giant', temp: '-145°C', day: '10h', year: '12y', moons: 79, desc: "More than twice as massive as all the other planets combined. The Great Red Spot is a centuries-old storm bigger than Earth.",
+              satellites: [
+                  { name: "Io", r: 2.5, dist: 35, color: 0xffdd88, speed: 0.08 },
+                  { name: "Europa", r: 2.2, dist: 42, color: 0xffffff, speed: 0.06 },
+                  { name: "Ganymede", r: 4.0, dist: 55, color: 0xddccbb, speed: 0.04 },
+                  { name: "Callisto", r: 3.5, dist: 70, color: 0x887766, speed: 0.02 }
+              ]
+            },
+            { id: 'saturn',  name: "Saturn",  r: 21,  dist: 380, color: 0xE4CD9E, speed: 0.006, type: 'Gas Giant', temp: '-178°C', day: '10.7h', year: '29y', moons: 82, ring: true, desc: "Adorned with a dazzling, complex system of icy rings, Saturn is unique in our solar system.",
+              satellites: [
+                  { name: "Titan", r: 4.5, dist: 60, color: 0xffcc33, speed: 0.03 },
+                  { name: "Rhea", r: 1.2, dist: 40, color: 0xdddddd, speed: 0.05 }
+              ]
+            },
+            { id: 'uranus',  name: "Uranus",  r: 14,  dist: 480, color: 0x7DE3F4, speed: 0.004, type: 'Ice Giant', temp: '-224°C', day: '17h', year: '84y', moons: 27, desc: "Rotates at a nearly 90-degree angle from the plane of its orbit. This unique tilt makes Uranus appear to spin on its side.",
+              satellites: [{ name: "Titania", r: 1.5, dist: 25, color: 0xeeeeee, speed: 0.04 }]
+            },
+            { id: 'neptune', name: "Neptune", r: 13,  dist: 560, color: 0x3E54E8, speed: 0.003, type: 'Ice Giant', temp: '-214°C', day: '16h', year: '165y', moons: 14, desc: "Dark, cold and whipped by supersonic winds, ice giant Neptune is the eighth and most distant planet in our solar system.",
+              satellites: [{ name: "Triton", r: 2.0, dist: 28, color: 0xffcccc, speed: -0.04 }]
+            }
+        ];
+
+        // --- THREE.JS GLOBALS ---
+        let scene, camera, renderer, composer, controls;
+        let solarGroup, galaxyGroup, quizGroup;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let planetMeshes = {}; 
+        let orbitLines = [];
+        let forceArrows = [];
+        
+        let quizPlanet = null;
+        let quizRunning = false;
+        let quizVelocity = 15;
+
+        // --- INIT ---
+        function init() {
+            // 1. Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.0003);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 50000);
+            camera.position.set(0, 400, 600);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // 2. Post Processing
+            const renderPass = new THREE.RenderPass(scene, camera);
+            const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.2; bloomPass.strength = 1.2; bloomPass.radius = 0.5;
+            
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(renderPass);
+            composer.addPass(bloomPass);
+
+            // 3. Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 5000;
+
+            // 4. Content
+            // Groups
+            solarGroup = new THREE.Group();
+            galaxyGroup = new THREE.Group();
+            quizGroup = new THREE.Group();
+            scene.add(solarGroup);
+            scene.add(galaxyGroup);
+            scene.add(quizGroup);
+
+            // Lighting
+            const sunLight = new THREE.PointLight(0xffaa00, 2, 3000);
+            solarGroup.add(sunLight);
+            const ambient = new THREE.AmbientLight(0x404040);
+            scene.add(ambient);
+
+            // Objects
+            createSun();
+            createPlanets();
+            createGalaxy();
+            createHabitableZone();
+            
+            // Events
+            window.addEventListener('resize', onResize);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onClick);
+            
+            // Start Loop
+            animate();
+            
+            // Initial toggle
+            galaxyGroup.visible = false;
+        }
+
+        // --- CREATION ---
+        function createSun() {
+            const geo = new THREE.SphereGeometry(40, 64, 64);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const sun = new THREE.Mesh(geo, mat);
+            
+            // Glow sprite
+            const spriteMat = new THREE.SpriteMaterial({ 
+                map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/glow.png'), 
+                color: 0xff5500, opacity: 0.8, blending: THREE.AdditiveBlending 
+            });
+            const glow = new THREE.Sprite(spriteMat);
+            glow.scale.set(300, 300, 1);
+            sun.add(glow);
+            
+            solarGroup.add(sun);
+
+            // Register Sun for interaction
+            planetMeshes['sun'] = {
+                mesh: sun,
+                data: { 
+                    id: 'sun', name: "Sun", type: 'Yellow Dwarf Star', 
+                    temp: '5,500°C', day: '27d', year: '230M y', moons: '8 (Planets)', 
+                    desc: "The powerhouse of our system. A near-perfect sphere of hot plasma, radiating energy that sustains life on Earth. It accounts for 99.86% of the total mass of the Solar System.",
+                    color: 0xffaa00, dist: 0 
+                }
+            };
+        }
+
+        function createPlanets() {
+            PLANETS_DATA.forEach(p => {
+                // Mesh
+                const geo = new THREE.SphereGeometry(p.r, 32, 32);
+                const mat = new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.8 });
+                const mesh = new THREE.Mesh(geo, mat);
+                
+                // Group Wrapper for Pivot
+                const pivot = new THREE.Object3D();
+                pivot.rotation.y = Math.random() * Math.PI * 2;
+                solarGroup.add(pivot);
+
+                // Add mesh to pivot
+                mesh.position.x = p.dist;
+                pivot.add(mesh);
+                
+                // Orbit Line
+                const curve = new THREE.EllipseCurve(0,0, p.dist, p.dist, 0, 2*Math.PI, false, 0);
+                const points = curve.getPoints(100);
+                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 });
+                const line = new THREE.Line(lineGeo, lineMat);
+                line.rotation.x = Math.PI/2;
+                solarGroup.add(line);
+                orbitLines.push(line);
+
+                // Force Vector (Arrow)
+                const dir = new THREE.Vector3(1, 0, 0);
+                const arrow = new THREE.ArrowHelper(dir, mesh.position, 20, 0x00ff00);
+                pivot.add(arrow); 
+                arrow.visible = false;
+                forceArrows.push({ arrow: arrow, planetMesh: mesh });
+                
+                // Ring for Saturn
+                if(p.ring) {
+                    const ringGeo = new THREE.RingGeometry(p.r * 1.5, p.r * 2.5, 64);
+                    const ringMat = new THREE.MeshStandardMaterial({ color: 0xaa9977, side: THREE.DoubleSide, transparent:true, opacity:0.7, roughness: 0.8 });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI/2;
+                    mesh.add(ring);
+                }
+
+                // MOONS
+                const moonObjs = [];
+                if(p.satellites) {
+                    p.satellites.forEach(sat => {
+                        const mPivot = new THREE.Object3D();
+                        mPivot.rotation.y = Math.random() * Math.PI * 2; // Random start
+                        
+                        // Moon Mesh
+                        const mGeo = new THREE.SphereGeometry(sat.r, 16, 16);
+                        const mMat = new THREE.MeshStandardMaterial({ color: sat.color, roughness: 0.9 });
+                        const mMesh = new THREE.Mesh(mGeo, mMat);
+                        mMesh.position.x = sat.dist;
+                        
+                        mPivot.add(mMesh);
+                        mesh.add(mPivot); // Attached to Planet Mesh -> follows planet
+                        
+                        moonObjs.push({ pivot: mPivot, speed: sat.speed });
+                    });
+                }
+                
+                // Store
+                planetMeshes[p.id] = { 
+                    mesh: mesh, pivot: pivot, 
+                    data: { ...p }, 
+                    angle: pivot.rotation.y,
+                    moons: moonObjs
+                };
+            });
+        }
+
+        function createGalaxy() {
+            // Particle System for Spiral Galaxy
+            const count = 50000;
+            const geo = new THREE.BufferGeometry();
+            const pos = [];
+            const col = [];
+            
+            for(let i=0; i<count; i++) {
+                // Spiral Math
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 20000 + 4000; // Far out
+                const spiralOffset = angle * 2 + Math.random(); // Arms
+                
+                // Modulate radius by arms (3 arms)
+                // We use polar coords:
+                const armAngle = (i % 3) * (Math.PI * 2 / 3);
+                const r = Math.random() * 10000;
+                const theta = r * 0.0005 + armAngle + Math.random()*0.5;
+                
+                const x = r * Math.cos(theta) * 4; // Stretch
+                const z = r * Math.sin(theta) * 4;
+                const y = (Math.random() - 0.5) * (2000 - r * 0.1); 
+                
+                pos.push(x, y, z);
+                
+                const c = new THREE.Color();
+                c.setHSL(0.6 + Math.random()*0.1, 0.8, 0.5 + Math.random()*0.5);
+                col.push(c.r, c.g, c.b);
+            }
+            
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+            
+            const mat = new THREE.PointsMaterial({ size: 15, vertexColors: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+            const galaxy = new THREE.Points(geo, mat);
+            galaxyGroup.add(galaxy);
+            
+            // Position Galaxy Group Far Away or Scaled
+            // We'll keep it centered but invisible until toggled
+        }
+
+        function createHabitableZone() {
+            // Earth is at 130. Zone approx 110 - 150
+            const geo = new THREE.RingGeometry(110, 150, 64);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x26ff93, side: THREE.DoubleSide, transparent:true, opacity: 0.05 });
+            const zone = new THREE.Mesh(geo, mat);
+            zone.rotation.x = Math.PI/2;
+            zone.name = "habitableZone";
+            zone.visible = false;
+            solarGroup.add(zone);
+        }
+
+        // --- SIMULATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+
+            // 1. Solar System Logic
+            if (!State.paused && State.mode !== 'quiz') {
+                Object.values(planetMeshes).forEach(p => {
+                    if (p.data.id === 'sun') return;
+                    // Physics Math: v ~ sqrt(G*M / r)
+                    // If G changes, speed changes
+                    const baseV = p.data.speed;
+                    const physicsV = baseV * Math.sqrt(State.G); 
+                    
+                    p.pivot.rotation.y += physicsV * (State.simSpeed * 0.05); // arbitrary dt
+                    p.angle = p.pivot.rotation.y;
+                    
+                    // Vectors Update
+                    if(State.overlays.forces) {
+                        // Velocity Vector (Green, Tangent)
+                        // Arrow attached to pivot currently points X (Radial).
+                        // We need it to point Z (Tangent) or calculate world pos.
+                        // Force (Gravity) points to center.
+                        
+                        // Let's reuse the single helper for Velocity for now
+                        const arrow = forceArrows.find(a => a.planetMesh === p.mesh).arrow;
+                        arrow.position.copy(p.mesh.position);
+                        // Tangent direction: Cross product of Up (Y) and Radial (X) -> Z
+                        arrow.setDirection(new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), 0));
+                        arrow.setLength(30 * State.G * (170/p.data.dist)); // Scale visual with gravity
+                        arrow.visible = true;
+                        arrow.visible = true;
+                    }
+                    
+                    // 3. Moon Animation
+                    if(p.moons) {
+                        p.moons.forEach(m => {
+                            m.pivot.rotation.y += m.speed * State.simSpeed * 0.1;
+                        });
+                    }
+                });
+            }
+
+            // 2. Quiz Logic (Verlet Integration for stability)
+            if (quizRunning && quizPlanet) {
+                // F = G * M * m / r^2
+                // a = F / m = GM / r^2
+                const GM = 1000; // Arbitrary constant for quiz feel
+                const pos = quizPlanet.position;
+                const rSq = pos.lengthSq();
+                const r = Math.sqrt(rSq);
+                
+                // Collision
+                if(r < 40) { endQuiz(false, "Impact with Sun!"); return; }
+                if(r > 1000) { endQuiz(false, "Lost to deep space!"); return; }
+                
+                const a = -GM / rSq; // Radial acceleration magnitude
+                const aVec = pos.clone().normalize().multiplyScalar(a);
+                
+                // Pos += Vel * dt
+                // Vel += Acc * dt
+                const dt = 0.5; // Fixed step
+                
+                quizPlanet.userData.vel.add(aVec.multiplyScalar(dt));
+                pos.add(quizPlanet.userData.vel.clone().multiplyScalar(dt));
+                
+                // Trail
+                console.log();
+                if(State.t % 5 === 0) {
+                     const tGeo = new THREE.Mesh(new THREE.SphereGeometry(1,4,4), new THREE.MeshBasicMaterial({color:0xffffff}));
+                     tGeo.position.copy(pos);
+                     quizGroup.add(tGeo);
+                }
+                State.t++;
+                // Check stability (roughly circular orbit check after some time)
+                if(State.t > 600) {
+                     endQuiz(true, "Stable Orbit Achieved!");
+                }
+            }
+
+            composer.render();
+            updateLabels();
+        }
+
+        function updateLabels() {
+            // Simple projected labels logic could go here
+            // Mapping existing DOM overlays to planet positions
+        }
+
+        // --- CONTROLLER LOGIC ---
+        function setMode(m) {
+            State.mode = m;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Reset Views
+            document.getElementById('lesson-card').classList.remove('active');
+            document.getElementById('quiz-modal').classList.remove('active');
+            document.getElementById('edit-title').style.display = 'none';
+            document.getElementById('planet-controls').style.display = 'none';
+            
+            if (m === 'lesson') { startLesson(); }
+            if (m === 'lab') { 
+                document.getElementById('edit-title').style.display = 'flex';
+                document.getElementById('planet-controls').style.display = 'block';
+            }
+            if (m === 'quiz') { setupQuiz(); }
+            
+            // View Update
+            if(m === 'explore') resetCamera();
+        }
+        
+        function updatePhysics(key, val) {
+            if(key === 'G') {
+                State.G = parseFloat(val);
+                document.getElementById('val-g').innerText = State.G + "x";
+            }
+            if(key === 'speed') {
+                State.simSpeed = parseInt(val);
+                document.getElementById('val-speed').innerText = State.simSpeed + "x";
+            }
+        }
+        
+        function editPlanet(key, val) {
+            if(!State.selectedPlanet) return;
+            const p = planetMeshes[State.selectedPlanet];
+            if(key === 'dist') {
+                const d = parseFloat(val);
+                p.mesh.position.x = d;
+                p.data.dist = d;
+            }
+            document.getElementById(`val-${key}`).innerText = val;
+        }
+
+        function toggleView(v) {
+            if(v === 'galaxy') {
+                State.view = State.view === 'system' ? 'galaxy' : 'system';
+                if(State.view === 'galaxy') {
+                    // Zoom Out Transition
+                    new TWEEN.Tween(camera.position).to({ x:0, y: 10000, z: 20000 }, 2000).start();
+                    new TWEEN.Tween(solarGroup.scale).to({ x:0.01, y:0.01, z:0.01 }, 2000).start();
+                    galaxyGroup.visible = true;
+                } else {
+                    resetCamera();
+                    new TWEEN.Tween(solarGroup.scale).to({ x:1, y:1, z:1 }, 2000).start();
+                    // setTimeout(() => galaxyGroup.visible = false, 2000);
+                }
+            }
+        }
+        
+        function toggleOverlay(k) {
+            State.overlays[k] = !State.overlays[k];
+            
+            if(k === 'orbits') orbitLines.forEach(l => l.visible = State.overlays.orbits);
+            if(k === 'forces') forceArrows.forEach(o => o.arrow.visible = State.overlays.forces);
+            if(k === 'habitable') scene.getObjectByName('habitableZone').visible = State.overlays.habitable;
+        }
+
+        function setPause(val) {
+            State.paused = val;
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+        
+        function resetSim() {
+            State.G = 1;
+            State.simSpeed = 10;
+            State.paused = false;
+            // Reset UI sliders
+            document.querySelectorAll('input').forEach(i => i.value = i.getAttribute('value'));
+            resetCamera();
+        }
+        
+        function resetCamera() {
+             new TWEEN.Tween(camera.position).to({ x:0, y: 400, z: 600 }, 1500).easing(TWEEN.Easing.Cubic.Out).start();
+             controls.target.set(0,0,0);
+        }
+
+        // --- LESSON SYSTEM ---
+        const LESSONS = [
+            { t: "Orbit & Gravity", b: "Planets orbit the Sun because of a balance between their forward velocity and the Sun's gravitational pull. Without gravity, they would fly off in a straight line. Without velocity, they would crash into the Sun.", cam: {x:0, y:600, z:100} },
+            { t: "Inner Planets", b: "Mercury, Venus, Earth, and Mars are 'Terrestrial Planets'. They are rocky, smaller, and orbit closer to the Sun where it is warmer.", cam: {x:0, y:200, z:300} },
+            { t: "The Goldilocks Zone", b: "Toggle the 'Habitable Zone' tool. Earth sits in this green band where temperatures allow liquid water to exist. Venus is too hot, Mars is too cold.", tool: 'habitable' },
+            { t: "Gas Giants", b: "Jupiter and Saturn are massive worlds made mostly of Hydrogen and Helium. Their immense gravity protects the inner planets by deflecting asteroids.", cam: {x:300, y:300, z:600} },
+            { t: "Galaxy Scale", b: "Our solar system is just one tiny dot in the Milky Way galaxy. Use 'Galaxy View' to see our place amongst billions of stars.", tool: 'galaxy' }
+        ];
+
+        function startLesson() {
+            State.lessonStep = 0;
+            showLessonStep();
+            document.getElementById('lesson-card').classList.add('active');
+        }
+        
+        function nextLesson() {
+            if(State.lessonStep < LESSONS.length-1) {
+                State.lessonStep++;
+                showLessonStep();
+            }
+        }
+        function prevLesson() {
+            if(State.lessonStep > 0) {
+                State.lessonStep--;
+                showLessonStep();
+            }
+        }
+        
+        function showLessonStep() {
+            const l = LESSONS[State.lessonStep];
+            document.getElementById('lesson-title').innerText = l.t;
+            document.getElementById('lesson-body').innerText = l.b;
+            document.getElementById('lesson-step').innerText = (State.lessonStep+1) + " / " + LESSONS.length;
+            
+            if(l.cam) {
+                new TWEEN.Tween(camera.position).to(l.cam, 1500).start();
+            }
+            if(l.tool === 'habitable') {
+                 scene.getObjectByName('habitableZone').visible = true;
+            }
+            if(l.tool === 'galaxy') toggleView('galaxy');
+        }
+
+        // --- QUIZ SYSTEM ---
+        function setupQuiz() {
+             document.getElementById('quiz-modal').classList.add('active');
+             document.getElementById('quiz-result').innerText = "";
+             solarGroup.visible = false;
+             galaxyGroup.visible = false;
+             quizGroup.visible = true;
+             
+             // Setup Quiz Scene
+             if(!quizPlanet) {
+                 const geo = new THREE.SphereGeometry(8,32,32);
+                 const mat = new THREE.MeshPhongMaterial({color:0x00ff00});
+                 quizPlanet = new THREE.Mesh(geo, mat);
+                 quizGroup.add(quizPlanet);
+                 
+                 // Add specific sun for quiz
+                 const sun = new THREE.Mesh(new THREE.SphereGeometry(20,32,32), new THREE.MeshBasicMaterial({color:0xffff00}));
+                 quizGroup.add(sun);
+             }
+             
+             // Reset pos
+             quizPlanet.position.set(120, 0, 0); 
+             // Trail clear
+             while(quizGroup.children.length > 2) { quizGroup.remove(quizGroup.children[2]); }
+             
+             quizRunning = false;
+             State.t = 0;
+             camera.position.set(0, 300, 0);
+             camera.lookAt(0,0,0);
+        }
+        
+        function updateQuizVal(v) {
+            quizVelocity = parseFloat(v);
+            document.getElementById('quiz-v-val').innerText = v + " km/s";
+        }
+        
+        function runQuizSimulation() {
+            // Initial Vel Vector (Tangent Z)
+            // v is scaling factor
+            // real math: v_circ = sqrt(GM/r). GM=1000, r=120 -> v=2.8
+            // user input "15" is arbitrary units, let's scale to game units
+            const gameV = quizVelocity * 0.2; 
+            
+            quizPlanet.userData.vel = new THREE.Vector3(0, 0, gameV);
+            quizPlanet.position.set(120, 0, 0);
+            while(quizGroup.children.length > 2) { quizGroup.remove(quizGroup.children[2]); }
+            
+            quizRunning = true;
+            State.t = 0;
+            document.getElementById('quiz-result').innerText = "Simulating...";
+        }
+        
+        function endQuiz(success, msg) {
+            quizRunning = false;
+            const res = document.getElementById('quiz-result');
+            res.innerText = msg;
+            res.style.color = success ? '#26ff93' : '#ff4b4b';
+        }
+
+        // --- UTILS ---
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function onMouseMove(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            // Tooltip logic for solar planets could go here
+        }
+
+        function onClick(e) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(solarGroup.children, true);
+            if(intersects.length > 0) {
+                // Find planet
+                let obj = intersects[0].object;
+                // Traverse up to find pivot or identify mesh
+                // For simplicity, just check planetMeshes
+                Object.keys(planetMeshes).forEach(k => {
+                    const group = planetMeshes[k];
+                    if(obj === group.mesh || obj.parent === group.mesh) {
+                        State.selectedPlanet = k;
+                        
+                        const p = group.data;
+                        
+                        // Generate Rich Data HTML
+                        const html = `
+                            <div style="border-left: 3px solid #${new THREE.Color(p.color).getHexString()}; padding-left: 10px; margin-bottom: 15px;">
+                                <h2 style="margin:0; font-family:var(--font-display); font-size:1.8rem; color:#fff;">${p.name.toUpperCase()}</h2>
+                                <div style="color:var(--accent); font-size:0.9rem; letter-spacing:2px;">${p.type.toUpperCase()}</div>
+                            </div>
+                            
+                            <div style="font-size:0.9rem; color:#ccc; line-height:1.5; margin-bottom:20px;">
+                                ${p.desc}
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:4px;">
+                                    <div style="color:#666; font-size:0.7rem;">MEAN TEMP</div>
+                                    <div style="color:#fff;">${p.temp}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:4px;">
+                                    <div style="color:#666; font-size:0.7rem;">DAY LENGTH</div>
+                                    <div style="color:#fff;">${p.day}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:4px;">
+                                    <div style="color:#666; font-size:0.7rem;">ORBIT YEAR</div>
+                                    <div style="color:#fff;">${p.year}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:4px;">
+                                    <div style="color:#666; font-size:0.7rem;">MOONS</div>
+                                    <div style="color:#fff;">${p.moons}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top:20px; font-size:0.8rem; color:#666;">
+                                DISTANCE FROM SUN: <span style="color:#fff;">${(p.dist * 1.5).toFixed(0)} million km</span>
+                            </div>
+                        `;
+                        
+                        document.getElementById('inspector-data').innerHTML = html;
+                        
+                        // Update Edit Sliders
+                        if(State.mode === 'lab') {
+                            document.getElementById('inp-dist').value = group.data.dist;
+                            updatePhysics('',0); // dry run to refresh label
+                        }
+                    }
+                });
+            }
+        }
+        
+        init();
+
+    </script>
+</body>
+</html>

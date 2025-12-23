@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Bounce</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: white;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: rgba(0, 0, 30, 0.7);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 15px 20px;
+            background: rgba(0, 0, 20, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #4a00e0;
+            z-index: 20;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #00e5ff;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        button:focus {
+            outline: 2px solid #00e5ff;
+            outline-offset: 2px;
+        }
+
+        .game-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            background: rgba(5, 5, 30, 0.7);
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 30, 0.9);
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #00e5ff, #8e2de2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #00e5ff;
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .bubble-types {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .bubble-type {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80px;
+        }
+
+        .bubble-preview {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .high-scores {
+            margin: 20px 0;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .high-scores h3 {
+            color: #00e5ff;
+            margin-bottom: 15px;
+        }
+
+        .score-list {
+            list-style: none;
+        }
+
+        .score-list li {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .input-group {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        input {
+            padding: 12px 15px;
+            border-radius: 30px;
+            border: 2px solid #4a00e0;
+            background: rgba(0, 0, 20, 0.7);
+            color: white;
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00e5ff;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        .level-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .level-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .level-btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #00e5ff;
+        }
+
+        .power-up-info {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .power-up {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100px;
+        }
+
+        .power-up-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+        }
+
+        .footer {
+            padding: 15px;
+            text-align: center;
+            background: rgba(0, 0, 20, 0.8);
+            border-top: 2px solid #4a00e0;
+            font-size: 0.9rem;
+            color: #aaa;
+            z-index: 20;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .stats {
+                width: 100%;
+                justify-content: space-around;
+            }
+            
+            .controls {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            h2 {
+                font-size: 2rem;
+            }
+            
+            .bubble-types, .level-buttons, .power-up-info {
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .bubble-type, .power-up {
+                width: 70px;
+            }
+            
+            .level-btn {
+                width: 70px;
+                height: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="score">0</div>
+                    <div class="stat-label">SCORE</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="level">1</div>
+                    <div class="stat-label">LEVEL</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="lives">3</div>
+                    <div class="stat-label">LIVES</div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="pauseBtn">PAUSE</button>
+                <button id="muteBtn">MUTE</button>
+            </div>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- Start Screen -->
+            <div id="startScreen" class="screen">
+                <h1>BUBBLE BOUNCE</h1>
+                <p>Break all the bubbles to advance to the next level! Use your paddle to bounce the ball and avoid letting it fall.</p>
+                
+                <div class="bubble-types">
+                    <div class="bubble-type">
+                    </div>
+                    <div class="bubble-type">
+                    </div>
+                    <div class="bubble-type">
+                    </div>
+                </div>
+                
+                <div class="power-up-info">
+                    <div class="power-up">
+                    </div>
+                    <div class="power-up">
+                    </div>
+                    <div class="power-up">
+                    </div>
+                    <div class="power-up">
+                    </div>
+                </div>
+                
+                <button id="startBtn">START GAME</button>
+            </div>
+            
+            <!-- Level Select Screen -->
+            <div id="levelSelectScreen" class="screen hidden">
+                <h2>SELECT LEVEL</h2>
+                <p>Choose a level to start playing. Each level has unique bubble arrangements and challenges.</p>
+                
+                <div class="level-buttons">
+                    <button class="level-btn" style="background: linear-gradient(135deg, #ff5252, #ff7675);" data-level="1">1</button>
+                    <button class="level-btn" style="background: linear-gradient(135deg, #ffd740, #fff176);" data-level="2">2</button>
+                    <button class="level-btn" style="background: linear-gradient(135deg, #4caf50, #81c784);" data-level="3">3</button>
+                </div>
+                
+                <button id="backToStartBtn">BACK</button>
+            </div>
+            
+            <!-- Game Over Screen -->
+            <div id="gameOverScreen" class="screen hidden">
+                <h2>GAME OVER</h2>
+                <p>Your final score: <span id="finalScore">0</span></p>
+                
+                <div class="high-scores">
+                    <h3>HIGH SCORES</h3>
+                    <ul class="score-list" id="scoreList">
+                    </ul>
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" id="playerName" placeholder="Enter your name">
+                    <button id="saveScoreBtn">SAVE SCORE</button>
+                </div>
+                
+                <div class="controls">
+                    <button id="restartBtn">PLAY AGAIN</button>
+                    <button id="menuBtn">MAIN MENU</button>
+                </div>
+            </div>
+            
+            <!-- Pause Screen -->
+            <div id="pauseScreen" class="screen hidden">
+                <h2>GAME PAUSED</h2>
+                <p>Take a break or adjust your settings</p>
+                
+                <div class="controls">
+                    <button id="resumeBtn">RESUME</button>
+                    <button id="restartFromPauseBtn">RESTART</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Use ← → Arrow Keys or Mouse/Touch to Move | Press P to Pause</p>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 500;
+        const PADDLE_WIDTH = 100;
+        const PADDLE_HEIGHT = 15;
+        const BALL_RADIUS = 10;
+        const BUBBLE_RADIUS = 25;
+        const POWER_UP_RADIUS = 12;
+        
+        // Game state
+        let game = {
+            score: 0,
+            level: 1,
+            lives: 3,
+            paused: false,
+            gameOver: false,
+            muted: false,
+            paddle: {
+                x: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
+                y: CANVAS_HEIGHT - 40,
+                width: PADDLE_WIDTH,
+                height: PADDLE_HEIGHT,
+                speed: 8
+            },
+            balls: [],
+            bubbles: [],
+            powerUps: [],
+            keys: {
+                left: false,
+                right: false
+            },
+            powerUpsActive: {
+                widen: false,
+                multiBall: false,
+                slowMotion: false
+            },
+            powerUpTimers: {
+                widen: 0,
+                slowMotion: 0
+            }
+        };
+        
+        // DOM Elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const levelElement = document.getElementById('level');
+        const livesElement = document.getElementById('lives');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const startScreen = document.getElementById('startScreen');
+        const levelSelectScreen = document.getElementById('levelSelectScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const finalScoreElement = document.getElementById('finalScore');
+        const scoreList = document.getElementById('scoreList');
+        const playerNameInput = document.getElementById('playerName');
+        const startBtn = document.getElementById('startBtn');
+        const backToStartBtn = document.getElementById('backToStartBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const menuBtn = document.getElementById('menuBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const restartFromPauseBtn = document.getElementById('restartFromPauseBtn');
+        const saveScoreBtn = document.getElementById('saveScoreBtn');
+        
+        // Set canvas internal resolution
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        
+        let animationId = null;
+        
+        // Initialize game
+        function initGame() {
+            game.score = 0;
+            game.lives = 3;
+            game.paused = false;
+            game.gameOver = false;
+            game.paddle.width = PADDLE_WIDTH;
+            game.balls = [];
+            game.bubbles = [];
+            game.powerUps = [];
+            game.powerUpsActive = {
+                widen: false,
+                multiBall: false,
+                slowMotion: false
+            };
+            game.powerUpTimers = {
+                widen: 0,
+                slowMotion: 0
+            };
+            game.paddle.x = CANVAS_WIDTH / 2 - game.paddle.width / 2;
+            createBall();
+            createBubbles();
+            updateUI();
+        }
+        
+        // Create a new ball
+        function createBall(x = null, y = null) {
+            const startX = x !== null ? x : (game.paddle.x + game.paddle.width / 2);
+            const startY = y !== null ? y : (game.paddle.y - BALL_RADIUS - 2);
+            const angle = (Math.random() * Math.PI / 3) - (Math.PI / 6); // -30deg to 30deg
+            const speed = 5;
+            game.balls.push({
+                x: startX,
+                y: startY,
+                radius: BALL_RADIUS,
+                dx: Math.sin(angle) * speed,
+                dy: -Math.abs(Math.cos(angle) * speed),
+                color: '#00e5ff'
+            });
+        }
+        
+        // Create bubbles for the current level
+        function createBubbles() {
+            game.bubbles = [];
+            const rows = 3 + game.level; // Increase rows with level
+            const cols = Math.floor(CANVAS_WIDTH / (BUBBLE_RADIUS * 2.2));
+            const spacingX = (CANVAS_WIDTH - cols * (BUBBLE_RADIUS * 2)) / (cols + 1);
+            const offsetY = 60;
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const x = spacingX + BUBBLE_RADIUS + col * (BUBBLE_RADIUS * 2 + spacingX);
+                    const y = offsetY + row * (BUBBLE_RADIUS * 2 + 10);
+                    let hits = 1;
+                    let color = '#ff5252';
+                    // Make some bubbles tougher on higher levels
+                    if (game.level > 1 && Math.random() > 0.7) {
+                        hits = 2; color = '#ffd740';
+                    }
+                    if (game.level > 2 && Math.random() > 0.8) {
+                        hits = 3; color = '#4caf50';
+                    }
+                    // Random chance to contain a power-up
+                    let powerUp = null;
+                    if (Math.random() > 0.92) {
+                        const types = ['widen', 'multiBall', 'slowMotion', 'extraLife'];
+                        powerUp = types[Math.floor(Math.random() * types.length)];
+                    }
+                    game.bubbles.push({
+                        x, y,
+                        radius: BUBBLE_RADIUS,
+                        hits,
+                        color,
+                        powerUp
+                    });
+                }
+            }
+        }
+        
+        // Update UI elements
+        function updateUI() {
+            scoreElement.textContent = game.score;
+            levelElement.textContent = game.level;
+            livesElement.textContent = game.lives;
+        }
+        
+        // Draw game elements
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
+            ctx.fillStyle = 'rgba(5, 5, 30, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw paddle
+            ctx.fillStyle = game.powerUpsActive.widen ? '#00e5ff' : '#8e2de2';
+            ctx.fillRect(game.paddle.x, game.paddle.y, game.paddle.width, game.paddle.height);
+            
+            // Draw balls
+            game.balls.forEach(ball => {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ball.color;
+                ctx.fill();
+                ctx.closePath();
+            });
+            
+            // Draw bubbles
+            game.bubbles.forEach(bubble => {
+                // Draw bubble
+                ctx.beginPath();
+                ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+                ctx.fillStyle = bubble.color;
+                ctx.fill();
+                ctx.closePath();
+                
+                // Draw hits counter
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(bubble.hits, bubble.x, bubble.y);
+                
+                // Draw power-up indicator if present
+                if (bubble.powerUp) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.fillText('★', bubble.x, bubble.y - bubble.radius - 10);
+                }
+            });
+            
+            // Draw power-ups
+            game.powerUps.forEach(powerUp => {
+                ctx.beginPath();
+                ctx.arc(powerUp.x, powerUp.y, powerUp.radius, 0, Math.PI * 2);
+                ctx.fillStyle = getPowerUpColor(powerUp.type);
+                ctx.fill();
+                ctx.closePath();
+                
+                // Draw power-up icon
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(getPowerUpSymbol(powerUp.type), powerUp.x, powerUp.y);
+            });
+        }
+        
+        // Get color for power-up
+        function getPowerUpColor(type) {
+            switch(type) {
+                case 'widen': return '#00e5ff';
+                case 'multiBall': return '#ff4081';
+                case 'slowMotion': return '#7c4dff';
+                case 'extraLife': return '#ff9800';
+                default: return '#ffffff';
+            }
+        }
+        
+        // Get symbol for power-up
+        function getPowerUpSymbol(type) {
+            switch(type) {
+                case 'widen': return 'W';
+                case 'multiBall': return 'M';
+                case 'slowMotion': return 'S';
+                case 'extraLife': return 'L';
+                default: return '?';
+            }
+        }
+        
+        // Update game state
+        function update() {
+            if (game.paused || game.gameOver) return;
+            
+            // Move paddle (keyboard)
+            if (game.keys.left && game.paddle.x > 0) {
+                game.paddle.x -= game.paddle.speed;
+            }
+            if (game.keys.right && game.paddle.x < canvas.width - game.paddle.width) {
+                game.paddle.x += game.paddle.speed;
+            }
+            
+            // Update power-up timers
+            if (game.powerUpsActive.widen) {
+                game.powerUpTimers.widen--;
+                if (game.powerUpTimers.widen <= 0) {
+                    game.powerUpsActive.widen = false;
+                    game.paddle.width = PADDLE_WIDTH;
+                }
+            }
+            
+            if (game.powerUpsActive.slowMotion) {
+                game.powerUpTimers.slowMotion--;
+                if (game.powerUpTimers.slowMotion <= 0) {
+                    game.powerUpsActive.slowMotion = false;
+                }
+            }
+            
+            // Move balls
+            const speedMultiplier = game.powerUpsActive.slowMotion ? 0.6 : 1;
+            
+            for (let b = game.balls.length - 1; b >= 0; b--) {
+                const ball = game.balls[b];
+                ball.x += ball.dx * speedMultiplier;
+                ball.y += ball.dy * speedMultiplier;
+                
+                // Wall collisions
+                if (ball.x - ball.radius < 0) {
+                    ball.x = ball.radius;
+                    ball.dx = -ball.dx;
+                }
+                if (ball.x + ball.radius > canvas.width) {
+                    ball.x = canvas.width - ball.radius;
+                    ball.dx = -ball.dx;
+                }
+                
+                // Ceiling collision
+                if (ball.y - ball.radius < 0) {
+                    ball.y = ball.radius;
+                    ball.dy = -ball.dy;
+                }
+                
+                // Paddle collision
+                if (
+                    ball.y + ball.radius > game.paddle.y &&
+                    ball.y - ball.radius < game.paddle.y + game.paddle.height &&
+                    ball.x > game.paddle.x &&
+                    ball.x < game.paddle.x + game.paddle.width &&
+                    ball.dy > 0
+                ) {
+                    const hitPosition = (ball.x - game.paddle.x) / game.paddle.width;
+                    const angle = (hitPosition - 0.5) * Math.PI / 2; // -45deg to 45deg
+                    const speed = Math.max(4, Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy));
+                    ball.dx = Math.sin(angle) * speed;
+                    ball.dy = -Math.abs(Math.cos(angle) * speed);
+                    ball.y = game.paddle.y - ball.radius - 1;
+                }
+                
+                // Bottom collision (lose life)
+                if (ball.y - ball.radius > canvas.height) {
+                    game.balls.splice(b, 1);
+                    if (game.balls.length === 0) {
+                        game.lives--;
+                        updateUI();
+                        if (game.lives > 0) {
+                            createBall();
+                        } else {
+                            gameOver(false);
+                        }
+                    }
+                }
+            }
+            
+            // Check bubble collisions
+            for (let i = game.bubbles.length - 1; i >= 0; i--) {
+                const bubble = game.bubbles[i];
+                for (let j = game.balls.length - 1; j >= 0; j--) {
+                    const ball = game.balls[j];
+                    const dx = ball.x - bubble.x;
+                    const dy = ball.y - bubble.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < ball.radius + bubble.radius) {
+                        // Basic reflect: invert Y direction and nudge ball outside collision
+                        // Calculate normalized collision vector
+                        const nx = dx / distance || 0;
+                        const ny = dy / distance || -1;
+                        // Reflect velocity (simple)
+                        const dot = ball.dx * nx + ball.dy * ny;
+                        ball.dx = ball.dx - 2 * dot * nx;
+                        ball.dy = ball.dy - 2 * dot * ny;
+                        // Ensure ball moves away
+                        if (Math.abs(ball.dy) < 1) ball.dy = ball.dy < 0 ? -2 : 2;
+                        // Damage bubble
+                        bubble.hits--;
+                        game.score += 10;
+                        updateUI();
+                        // If bubble destroyed
+                        if (bubble.hits <= 0) {
+                            // spawn power-up if present
+                            if (bubble.powerUp) {
+                                game.powerUps.push({
+                                    x: bubble.x,
+                                    y: bubble.y,
+                                    dy: 2,
+                                    radius: POWER_UP_RADIUS,
+                                    type: bubble.powerUp
+                                });
+                            }
+                            game.bubbles.splice(i, 1);
+                        }
+                        // break to avoid multiple collisions with same ball in same frame
+                        break;
+                    }
+                }
+            }
+            
+            // Move power-ups
+            for (let p = game.powerUps.length - 1; p >= 0; p--) {
+                const powerUp = game.powerUps[p];
+                powerUp.y += powerUp.dy;
+                
+                // Remove if off screen
+                if (powerUp.y - powerUp.radius > canvas.height) {
+                    game.powerUps.splice(p, 1);
+                    continue;
+                }
+                
+                // Check collision with paddle
+                if (
+                    powerUp.y + powerUp.radius > game.paddle.y &&
+                    powerUp.x > game.paddle.x &&
+                    powerUp.x < game.paddle.x + game.paddle.width
+                ) {
+                    applyPowerUp(powerUp.type);
+                    game.powerUps.splice(p, 1);
+                }
+            }
+            
+            // Check if level is complete
+            if (game.bubbles.length === 0) {
+                nextLevel();
+            }
+        }
+        
+        // Apply power-up effect
+        function applyPowerUp(type) {
+            switch(type) {
+                case 'widen':
+                    game.powerUpsActive.widen = true;
+                    game.paddle.width = Math.min(300, PADDLE_WIDTH * 1.6);
+                    game.powerUpTimers.widen = 60 * 8; // ~8 seconds
+                    break;
+                case 'multiBall':
+                    // duplicate existing balls up to +2
+                    const currentBalls = game.balls.slice();
+                    for (let i = 0; i < Math.min(2, currentBalls.length); i++) {
+                        createBall(currentBalls[i].x, currentBalls[i].y);
+                    }
+                    break;
+                case 'slowMotion':
+                    game.powerUpsActive.slowMotion = true;
+                    game.powerUpTimers.slowMotion = 60 * 6; // ~6 seconds
+                    break;
+                case 'extraLife':
+                    game.lives++;
+                    updateUI();
+                    break;
+            }
+        }
+        
+        // Advance to next level
+        function nextLevel() {
+            game.level++;
+            if (game.level > 3) {
+                game.level = 3;
+                gameOver(true);
+            } else {
+                game.balls = [];
+                createBall();
+                createBubbles();
+                updateUI();
+            }
+        }
+        
+        // Game over
+        function gameOver(completed = false) {
+            game.gameOver = true;
+            finalScoreElement.textContent = game.score;
+            showHighScores();
+            gameOverScreen.classList.remove('hidden');
+            // Cancel animation
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        
+        // Show high scores
+        function showHighScores() {
+            const scores = JSON.parse(localStorage.getItem('bubbleBounceScores')) || [];
+            scoreList.innerHTML = '';
+            scores.sort((a, b) => b.score - a.score);
+            for (let i = 0; i < Math.min(5, scores.length); i++) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${scores[i].name}</span><span>${scores[i].score}</span>`;
+                scoreList.appendChild(li);
+            }
+            if (scores.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = 'No scores yet. Be the first!';
+                scoreList.appendChild(li);
+            }
+        }
+        
+        // Save score to localStorage
+        function saveScore() {
+            const name = playerNameInput.value.trim() || 'Anonymous';
+            const scores = JSON.parse(localStorage.getItem('bubbleBounceScores')) || [];
+            scores.push({
+                name: name,
+                score: game.score,
+                date: new Date().toLocaleDateString()
+            });
+            scores.sort((a, b) => b.score - a.score);
+            if (scores.length > 10) scores.length = 10;
+            localStorage.setItem('bubbleBounceScores', JSON.stringify(scores));
+            showHighScores();
+            playerNameInput.value = '';
+        }
+        
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        // Event Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') game.keys.left = true;
+            if (e.key === 'ArrowRight') game.keys.right = true;
+            if (e.key === 'p' || e.key === 'P') togglePause();
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') game.keys.left = false;
+            if (e.key === 'ArrowRight') game.keys.right = false;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (game.paused || game.gameOver) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            game.paddle.x = mouseX - game.paddle.width / 2;
+            if (game.paddle.x < 0) game.paddle.x = 0;
+            if (game.paddle.x > canvas.width - game.paddle.width) {
+                game.paddle.x = canvas.width - game.paddle.width;
+            }
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (game.paused || game.gameOver) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touchX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+            game.paddle.x = touchX - game.paddle.width / 2;
+            if (game.paddle.x < 0) game.paddle.x = 0;
+            if (game.paddle.x > canvas.width - game.paddle.width) {
+                game.paddle.x = canvas.width - game.paddle.width;
+            }
+        }, { passive: false });
+        
+        pauseBtn.addEventListener('click', togglePause);
+        
+        muteBtn.addEventListener('click', () => {
+            game.muted = !game.muted;
+            muteBtn.textContent = game.muted ? 'UNMUTE' : 'MUTE';
+        });
+        
+        startBtn.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            levelSelectScreen.classList.remove('hidden');
+        });
+        
+        backToStartBtn.addEventListener('click', () => {
+            levelSelectScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+        
+        document.querySelectorAll('.level-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                game.level = parseInt(btn.dataset.level) || 1;
+                levelSelectScreen.classList.add('hidden');
+                startScreen.classList.add('hidden');
+                initGame();
+                // cancel any previous loop
+                if (animationId) cancelAnimationFrame(animationId);
+                animationId = requestAnimationFrame(gameLoop);
+            });
+        });
+        
+        restartBtn.addEventListener('click', () => {
+            gameOverScreen.classList.add('hidden');
+            initGame();
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(gameLoop);
+        });
+        
+        menuBtn.addEventListener('click', () => {
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+        
+        resumeBtn.addEventListener('click', () => {
+            pauseScreen.classList.add('hidden');
+            game.paused = false;
+        });
+        
+        restartFromPauseBtn.addEventListener('click', () => {
+            pauseScreen.classList.add('hidden');
+            initGame();
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(gameLoop);
+        });
+        
+        saveScoreBtn.addEventListener('click', saveScore);
+        
+        // Toggle pause
+        function togglePause() {
+            if (game.gameOver) return;
+            game.paused = !game.paused;
+            if (game.paused) {
+                pauseScreen.classList.remove('hidden');
+            } else {
+                pauseScreen.classList.add('hidden');
+            }
+        }
+        
+        // Initialize high scores display
+        showHighScores();
+    </script>
+</body>
+</html>

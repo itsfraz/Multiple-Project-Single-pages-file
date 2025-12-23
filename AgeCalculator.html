@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="AgeCalc.png">
+    <title>Ultimate Age Calculator | Premium Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            /* Light Theme Palette */
+            --primary: #6366f1; /* Indigo 500 */
+            --primary-dark: #4338ca;
+            --secondary: #06b6d4; /* Cyan 500 */
+            --accent: #f43f5e; /* Rose 500 */
+            
+            --bg-light: #f8fafc;
+            --bg-gradient: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                          radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+                          radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.15) 0px, transparent 50%),
+                          radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+            
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --input-bg: rgba(255, 255, 255, 0.6);
+            
+            --radius-xl: 32px;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            
+            --success: #10b981;
+            --error: #ef4444;
+            
+            --ease-out: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg-light: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: rgba(15, 23, 42, 0.6);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-light);
+            background-image: var(--bg-gradient);
+            background-attachment: fixed;
+            background-size: cover;
+            min-height: 100vh;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            perspective: 1000px;
+        }
+
+        /* Glass Card */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--glass-shadow);
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .title-group h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+            margin-left: 2px;
+        }
+
+        .theme-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center; justify-content: center;
+            font-size: 1.25rem;
+            transition: all 0.3s var(--ease-out);
+        }
+        .theme-btn:hover { background: var(--primary); color: white; transform: rotate(15deg); }
+
+        /* Inputs */
+        .calculator-form {
+            position: relative;
+            z-index: 2;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-wrapper { position: relative; }
+        
+        .input-wrapper label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 1.25rem;
+            border-radius: var(--radius-lg);
+            border: 2px solid transparent;
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .form-control:hover { background: rgba(255,255,255,0.4); }
+        [data-theme="dark"] .form-control:hover { background: rgba(255,255,255,0.05); }
+
+        .form-control:focus {
+            outline: none;
+            background: var(--glass-bg);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+            display: flex;
+            align-items: center; justify-content: center; gap: 10px;
+        }
+
+        .btn-main:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.5);
+        }
+        .btn-main:active { transform: translateY(-2px); }
+
+        /* Output */
+        .output-section {
+            margin-top: 3rem;
+            display: none; /* Hidden by default */
+        }
+        .output-section.visible { display: block; animation: fadeIn 0.6s ease-out; }
+
+        .big-result-card {
+            background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(6,182,212,0.1));
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 2rem;
+        }
+        .big-result-card h2 { font-size: 1.5rem; color: var(--text-main); margin-bottom: 1rem; }
+        .age-display { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1.5rem;
+            margin: 2.5rem 0;
+        }
+
+        .stat-card {
+            background: var(--input-bg);
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+            border: 1px solid var(--glass-border);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-5px); background: var(--glass-bg); }
+        .stat-val { font-size: 1.8rem; font-weight: 700; color: var(--secondary); margin-bottom: 0.5rem; }
+        .stat-lbl { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+
+        /* Sections */
+        .detail-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--glass-border);
+        }
+        .section-title { font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; color: var(--text-main); }
+        .section-title i { color: var(--accent); }
+
+        /* Chart */
+        .chart-wrapper { height: 300px; position: relative; }
+
+        /* Action Buttons */
+        .action-grid {
+            display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin-top: 2rem;
+        }
+        .btn-action {
+            padding: 0.8rem 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border);
+            background: var(--input-bg); color: var(--text-muted); font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-action:hover { background: var(--primary); color: white; border-color: transparent; transform: translateY(-3px); }
+
+        /* Loader */
+        .loader {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+            z-index: 100; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .loader.active { opacity: 1; pointer-events: all; }
+        .spinner {
+            width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        /* Animations */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .input-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .glass-card { padding: 1.5rem; border-radius: var(--radius-lg); }
+            .title-group h1 { font-size: 1.8rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .action-grid { flex-direction: column; }
+            .btn-action { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <!-- Loader -->
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container" id="captureArea">
+        <div class="glass-card">
+            <!-- Header -->
+            <div class="header">
+                <div class="title-group">
+                    <h1><i class="fa-solid fa-hourglass-start"></i> Age Master</h1>
+                    <p class="subtitle">Precision Chronological Analysis Tool</p>
+                </div>
+                <button class="theme-btn" id="themeToggle" aria-label="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+
+            <!-- Input Form -->
+            <div class="calculator-form">
+                <div class="input-grid">
+                    <div class="input-wrapper">
+                        <label for="day">Day</label>
+                        <input type="number" id="day" class="form-control" placeholder="DD" min="1" max="31">
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="month">Month</label>
+                        <select id="month" class="form-control">
+                            <option value="">Select</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="year">Year</label>
+                        <input type="number" id="year" class="form-control" placeholder="YYYY" min="1900">
+                    </div>
+                </div>
+
+                <button class="btn-main" onclick="calculate()">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Analyze Age
+                </button>
+            </div>
+
+            <!-- Output Section -->
+            <div id="output" class="output-section">
+                
+                <div class="big-result-card">
+                    <h2 id="resultText">You are</h2>
+                    <div class="age-display" id="ageDisplay">0 Years, 0 Months, 0 Days</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-val" data-val-target="0" id="statDays">0</div>
+                        <div class="stat-lbl">Total Days</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" data-val-target="0" id="statWeeks">0</div>
+                        <div class="stat-lbl">Weeks Lived</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" data-val-target="0" id="statHours">0</div>
+                        <div class="stat-lbl">Hours (approx)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="nextBdayBox">0</div>
+                        <div class="stat-lbl">Next Birthday</div>
+                    </div>
+                </div>
+
+                <!-- Visualization -->
+                <div class="detail-section">
+                    <h3 class="section-title"><i class="fa-solid fa-chart-pie"></i> Life Progression</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="lifeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Milestones -->
+                <div class="detail-section">
+                    <h3 class="section-title"><i class="fa-solid fa-trophy"></i> Upcoming Milestone</h3>
+                    <div id="nextMilestone" style="text-align:center; font-size: 1.2rem; font-weight:600; color:var(--primary);">
+                        Calculating...
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="action-grid">
+                    <button class="btn-action" onclick="exportResult()"><i class="fa-solid fa-download"></i> Save as Image</button>
+                    <button class="btn-action" onclick="copyResult()"><i class="fa-solid fa-copy"></i> Copy Summary</button>
+                    <button class="btn-action" onclick="resetApp()"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Init
+        const app = {
+            data: null,
+            chart: null,
+            theme: localStorage.getItem('theme') || 'light'
+        };
+
+        // Theme Handling
+        document.body.setAttribute('data-theme', app.theme);
+        const themeBtn = document.getElementById('themeToggle');
+        themeBtn.onclick = () => {
+            app.theme = app.theme === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', app.theme);
+            localStorage.setItem('theme', app.theme);
+            const icon = themeBtn.querySelector('i');
+            icon.className = app.theme === 'light' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+            if(app.chart) updateChartColors();
+        };
+
+        // Load saved data
+        window.onload = () => {
+            const saved = JSON.parse(localStorage.getItem('ageCalcData'));
+            if(saved) {
+                document.getElementById('day').value = saved.d;
+                document.getElementById('month').value = saved.m;
+                document.getElementById('year').value = saved.y;
+            }
+            
+            // Set max year to current
+            document.getElementById('year').max = new Date().getFullYear();
+        };
+
+        async function calculate() {
+            const d = parseInt(document.getElementById('day').value);
+            const m = parseInt(document.getElementById('month').value);
+            const y = parseInt(document.getElementById('year').value);
+
+            if(!isValidDate(d, m, y)) {
+                alert("Please enter a valid date!");
+                return;
+            }
+
+            // Show Loader
+            const loader = document.getElementById('loader');
+            loader.classList.add('active');
+
+            // Simulate calculation delay for "real feel"
+            await new Promise(r => setTimeout(r, 600));
+
+            // Logic
+            const birth = new Date(y, m - 1, d);
+            const today = new Date();
+            const age = getAge(birth, today);
+            
+            // Save logic
+            localStorage.setItem('ageCalcData', JSON.stringify({d, m, y}));
+
+            // Update UI
+            document.getElementById('output').classList.add('visible');
+            document.getElementById('ageDisplay').innerText = `${age.years} Years, ${age.months} Months, ${age.days} Days`;
+            
+            // Animated Counters
+            animateValue("statDays", 0, age.totalDays, 2000);
+            animateValue("statWeeks", 0, Math.floor(age.totalDays / 7), 2000);
+            animateValue("statHours", 0, age.totalDays * 24, 2500);
+            
+            // Next Birthday
+            const nextBday = getNextBirthday(birth, today);
+            document.getElementById('nextBdayBox').innerText = `${nextBday.days} Days`;
+
+            // Chart
+            updateChart(age.years);
+
+            // Milestone
+            const nextMile = getNextMilestone(age.years);
+            document.getElementById('nextMilestone').innerHTML = `Next big moment: <span style="color:var(--accent)">${nextMile.title}</span> at age ${nextMile.age} (${nextMile.age - age.years} years to go)`;
+
+            loader.classList.remove('active');
+            
+            // Scroll to result
+            document.getElementById('output').scrollIntoView({behavior: 'smooth'});
+        }
+
+        function isValidDate(d, m, y) {
+            if(!d || !m || !y) return false;
+            const date = new Date(y, m - 1, d);
+            const now = new Date();
+            return date.getDate() === d && date.getMonth() === m - 1 && date.getFullYear() === y && date < now;
+        }
+
+        function getAge(birth, today) {
+            let years = today.getFullYear() - birth.getFullYear();
+            let months = today.getMonth() - birth.getMonth();
+            let days = today.getDate() - birth.getDate();
+
+            if (days < 0) {
+                months--;
+                days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+            }
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+            
+            const diffTime = Math.abs(today - birth);
+            const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            return { years, months, days, totalDays };
+        }
+
+        function getNextBirthday(birth, today) {
+            let next = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
+            if(next < today) next.setFullYear(today.getFullYear() + 1);
+            const diff = next - today;
+            return { days: Math.ceil(diff / (1000 * 60 * 60 * 24)) };
+        }
+
+        function getNextMilestone(age) {
+            const milestones = [
+                {age: 18, title: "Adulthood"},
+                {age: 21, title: "Legal Independence"},
+                {age: 25, title: "Quarter Century"},
+                {age: 30, title: "Thriving Thirties"},
+                {age: 40, title: "Fabulous Forties"},
+                {age: 50, title: "Gold Jubilee"},
+                {age: 60, title: "Senior Wisdom"},
+                {age: 100, title: "Centenarian"}
+            ];
+            return milestones.find(m => m.age > age) || {age: 1000, title: "Immortal"};
+        }
+
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            const obj = document.getElementById(id);
+            const range = end - start;
+            let current = start;
+            const increment = end > start ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(duration / range));
+            
+            // Optimize for large numbers
+            if (range > 100) {
+                let startTime = null;
+                function step(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const progress = timestamp - startTime;
+                    const pct = Math.min(progress / duration, 1);
+                    obj.innerHTML = Math.floor(pct * (end - start) + start).toLocaleString();
+                    if (progress < duration) {
+                        window.requestAnimationFrame(step);
+                    } else {
+                        obj.innerHTML = end.toLocaleString();
+                    }
+                }
+                window.requestAnimationFrame(step);
+            } else {
+                // Simple interval for small numbers
+                const timer = setInterval(function() {
+                    current += increment;
+                    obj.innerHTML = current;
+                    if (current == end) clearInterval(timer);
+                }, Math.max(stepTime, 10));
+            }
+        }
+
+        function updateChart(age) {
+            const ctx = document.getElementById('lifeChart').getContext('2d');
+            const lifeExp = 85; 
+            const lived = age;
+            const left = Math.max(0, lifeExp - age);
+            
+            if(app.chart) app.chart.destroy();
+
+            app.chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Years Lived', 'Years Remaining (Est)'],
+                    datasets: [{
+                        data: [lived, left],
+                        backgroundColor: ['#6366f1', '#e2e8f0'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: app.theme === 'dark' ? '#fff' : '#333' } }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
+                    }
+                }
+            });
+        }
+        
+        function updateChartColors() {
+             if(app.chart) {
+                 app.chart.options.plugins.legend.labels.color = app.theme === 'dark' ? '#fff' : '#333';
+                 app.chart.update();
+             }
+        }
+
+        async function exportResult() {
+             const element = document.getElementById('captureArea');
+             const canvas = await html2canvas(element, { backgroundColor: app.theme==='dark' ? '#0f172a' : '#f8fafc' });
+             const link = document.createElement('a');
+             link.download = 'age-calculator-result.png';
+             link.href = canvas.toDataURL();
+             link.click();
+        }
+
+        function copyResult() {
+            const text = `I'm ${document.getElementById('ageDisplay').innerText} old! Calculated with Age Master.`;
+            navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
+        }
+
+        function resetApp() {
+            document.getElementById('day').value = '';
+            document.getElementById('month').value = '';
+            document.getElementById('year').value = '';
+            localStorage.removeItem('ageCalcData');
+            document.getElementById('output').classList.remove('visible');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
