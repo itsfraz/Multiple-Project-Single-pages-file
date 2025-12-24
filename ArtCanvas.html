@@ -2,1417 +2,1304 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generative Art Studio | Interactive Canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aether | Generative Art Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --bg-dark: #050508;
+            --bg-panel: rgba(20, 20, 25, 0.65);
+            --primary: #7000ff;
+            --primary-glow: rgba(112, 0, 255, 0.4);
+            --accent: #00f3ff;
+            --accent-glow: rgba(0, 243, 255, 0.4);
+            --text-main: #ffffff;
+            --text-muted: #8b9bb4;
+            --border: rgba(255, 255, 255, 0.08);
+            --glass-blur: blur(20px);
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        :root {
-            --primary: #6a11cb;
-            --secondary: #2575fc;
-            --accent: #ff2d75;
-            --dark: #0f0c29;
-            --darker: #090718;
-            --light: #f0f0f5;
-            --card-bg: rgba(25, 20, 50, 0.7);
-            --transition: all 0.3s ease;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: linear-gradient(135deg, var(--darker), var(--dark));
-            color: var(--light);
-            min-height: 100vh;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            overflow: hidden; /* Prevent scroll on desktop, handle in containers */
+            height: 100vh;
+            width: 100vw;
         }
 
-        header {
-            text-align: center;
-            padding: 25px 20px;
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-        }
-
-        h1 {
-            font-size: 3.2rem;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #ff7e5f, #feb47b, #6a11cb, #2575fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            letter-spacing: 1px;
-        }
-
-        .subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            max-width: 800px;
-            margin: 0 auto 15px;
-            line-height: 1.6;
-        }
-
-        .tagline {
-            display: inline-block;
-            background: rgba(106, 17, 203, 0.3);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            margin-top: 10px;
-        }
-
-        .container {
-            display: flex;
-            flex: 1;
-            padding: 20px;
-            gap: 25px;
-            max-width: 1800px;
-            margin: 0 auto;
+        /* Animated Background Gradient */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 40%),
+                radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.1), transparent 40%);
+            z-index: -1;
+            animation: pulse-bg 10s ease-in-out infinite alternate;
         }
 
-        #canvas-container {
+        @keyframes pulse-bg {
+            0% { opacity: 0.5; transform: scale(1); }
+            100% { opacity: 0.8; transform: scale(1.1); }
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Canvas Area */
+        .canvas-wrapper {
             flex: 1;
             position: relative;
-            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-            background: rgba(0, 0, 0, 0.2);
-            min-height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: crosshair;
+            background: radial-gradient(circle at center, #1a1a24 0%, #000000 100%);
             transition: var(--transition);
         }
 
         canvas {
             display: block;
-            background: #0a0a14;
             width: 100%;
             height: 100%;
         }
 
-        .controls {
-            width: 320px;
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 25px;
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            overflow-y: auto;
-            max-height: calc(100vh - 180px);
+        /* Floating Header */
+        .header-overlay {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .header-content {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: inline-flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            pointer-events: auto;
+            transform-origin: top left;
             transition: var(--transition);
         }
 
-        .control-group {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        .header-content:hover {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
-        .control-group:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-
-        h2 {
+        h1 {
             font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: #ff7e5f;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(165, 180, 252, 0.3);
+        }
+
+        .tagline {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Controls Sidebar */
+        .controls-panel {
+            width: 360px;
+            background: var(--bg-panel);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur); /* Safari */
+            border-left: 1px solid var(--border);
             display: flex;
-            align-items: center;
-            gap: 12px;
+            flex-direction: column;
+            z-index: 20;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: -10px 0 40px rgba(0,0,0,0.5);
         }
 
-        h2 i {
-            font-size: 1.3rem;
+        .controls-panel.collapsed {
+            transform: translateX(100%);
         }
 
-        .slider-container {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 1rem;
+        .panel-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
 
-        .value {
-            color: #feb47b;
-            font-weight: bold;
-            min-width: 40px;
-            text-align: right;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            height: 8px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(106, 17, 203, 0.7);
-            transition: var(--transition);
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 15px rgba(106, 17, 203, 0.9);
-        }
-
-        .buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 15px;
-        }
-
-        button {
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            cursor: pointer;
+        .panel-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
             font-weight: 600;
-            transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .panel-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .panel-content::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+        .panel-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* Sections */
+        .control-section h3 {
+            font-size: 0.85rem;
+            color: var(--text-main);
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
+            gap: 0.5rem;
+            font-weight: 500;
         }
 
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.4);
+        .control-section h3 i {
+            color: var(--primary);
+            font-size: 0.8rem;
         }
 
-        button:active {
-            transform: translateY(1px);
-        }
-
-        .btn-accent {
-            background: linear-gradient(90deg, var(--accent), #ff6b9c);
-        }
-
-        .algorithm-selector {
+        /* Algorithm Grid */
+        .algo-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
         }
 
-        .algorithm-btn {
-            background: rgba(255, 255, 255, 0.08);
-            text-align: left;
-            padding: 15px;
-            border-radius: 10px;
-            transition: var(--transition);
-            border: 1px solid transparent;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .algorithm-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateX(5px);
-        }
-
-        .algorithm-btn.active {
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 5px 15px rgba(106, 17, 203, 0.4);
-        }
-
-        .algorithm-btn i {
-            font-size: 1.2rem;
-            width: 30px;
-            text-align: center;
-        }
-
-        .instructions {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 25px;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .instructions h3 {
-            margin-bottom: 12px;
-            color: #feb47b;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .instructions ul {
-            padding-left: 25px;
-        }
-
-        .instructions li {
-            margin-bottom: 10px;
-        }
-
-        .key {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-
-        footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 1rem;
-            opacity: 0.8;
-            background: rgba(0, 0, 0, 0.3);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: auto;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-size: 0.9rem;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: #feb47b;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            opacity: 0.8;
-        }
-
-        .presets {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .preset-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: none;
-            padding: 10px;
+        .algo-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.75rem;
             border-radius: 8px;
-            color: var(--light);
             cursor: pointer;
             transition: var(--transition);
-            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            font-family: var(--font-main);
         }
 
-        .preset-btn:hover {
-            background: rgba(106, 17, 203, 0.3);
+        .algo-btn i {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .algo-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--text-main);
             transform: translateY(-2px);
         }
 
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-            .container {
-                flex-direction: column;
+        .algo-btn.active {
+            background: rgba(112, 0, 255, 0.15);
+            border-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(112, 0, 255, 0.15);
+        }
+
+        .algo-btn.active i {
+            color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        /* Sliders */
+        .slider-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .slider-value {
+            font-family: var(--font-mono);
+            color: var(--accent);
+            font-size: 0.8rem;
+        }
+
+        .range-input {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-main);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: -6px; /* Center thumb */
+        }
+
+        .range-input::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--value, 0%), rgba(255,255,255,0.1) var(--value, 0%), rgba(255,255,255,0.1) 100%);
+            border-radius: 2px;
+        }
+
+        .range-input:hover::-webkit-slider-thumb {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Palette Swatches */
+        .color-palettes {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .palette-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .palette-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .palette-btn.active {
+            border-color: var(--text-main);
+            transform: scale(1.15);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        /* Action Buttons */
+        .action-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: auto;
+        }
+
+        .btn {
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: none;
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: #fff;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--primary-glow);
+        }
+
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Toggle Button for Mobile */
+        .toggle-controls {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(20, 20, 25, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 30;
+            transition: var(--transition);
+            display: none; /* Hidden on desktop by default unless we want a hide feature */
+        }
+
+        .toggle-controls:hover {
+            background: var(--primary);
+        }
+
+        /* Stats */
+        .stats-overlay {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            background: rgba(0,0,0,0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+        }
+
+        /* Responsiveness */
+        @media (max-width: 1024px) {
+            .controls-panel {
+                width: 320px;
+                position: absolute;
+                right: 0;
+                height: 100%;
             }
             
-            .controls {
-                width: 100%;
-                max-height: 400px;
+            .toggle-controls {
+                display: flex;
             }
-            
-            #canvas-container {
-                min-height: 60vh;
+
+            .header-overlay {
+                top: 1.5rem;
+                left: 1.5rem;
             }
         }
 
         @media (max-width: 768px) {
-            h1 {
-                font-size: 2.5rem;
+            .controls-panel {
+                width: 100%;
+                transform: translateY(calc(100% - 60px)); /* Peak mode or fully hidden? Let's do off-screen */
+                transform: translateY(0);
+                position: absolute;
+                bottom: 0px;
+                height: 60vh;
+                top: auto;
+                right: 0;
+                border-left: none;
+                border-top: 1px solid var(--border);
+                border-radius: 20px 20px 0 0;
             }
-            
-            .subtitle {
-                font-size: 1rem;
-            }
-            
-            .container {
-                padding: 15px;
-            }
-            
-            .controls {
-                padding: 20px;
-            }
-            
-            .buttons {
-                grid-template-columns: 1fr;
-            }
-            
-            .presets {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
 
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 2rem;
+            .controls-panel.collapsed {
+                transform: translateY(100%);
             }
             
+            /* Add a drag handle behavior or similar if needed, but toggle button works */
+            .toggle-controls {
+                top: auto;
+                bottom: 2rem;
+                right: 2rem;
+            }
+
             .header-content {
-                padding: 0 10px;
+                padding: 0.75rem 1rem;
             }
+
+            h1 { font-size: 1.2rem; }
             
-            .controls {
-                padding: 15px;
-            }
-            
-            .presets {
-                grid-template-columns: 1fr;
+            .app-container {
+                flex-direction: column;
             }
         }
-
-        /* Animation effects */
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
-        }
-
-        .floating {
-            animation: float 3s ease-in-out infinite;
-        }
-
-        /* Particle effects */
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5);
-            pointer-events: none;
-            z-index: 100;
+        
+        /* Utility */
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="header-content">
-            <h1><i class="fas fa-paint-brush"></i> Generative Art Studio</h1>
-            <p class="subtitle">Experience the beauty of algorithmic art. Interact with evolving patterns, customize parameters, and create unique visual experiences.</p>
-            <div class="tagline">Real-time generative art with physics-based interactions</div>
-        </div>
-    </header>
-    
-    <div class="container">
-        <div id="canvas-container">
-            <canvas id="artCanvas"></canvas>
-        </div>
-        
-        <div class="controls">
-            <div class="control-group">
-                <h2><i class="fas fa-magic"></i> Art Algorithms</h2>
-                <div class="algorithm-selector">
-                    <button class="algorithm-btn active" data-algorithm="particles">
-                        <i class="fas fa-circle"></i> Particle System
-                    </button>
-                    <button class="algorithm-btn" data-algorithm="fractal">
-                        <i class="fas fa-tree"></i> Fractal Tree
-                    </button>
-                    <button class="algorithm-btn" data-algorithm="automata">
-                        <i class="fas fa-th"></i> Cellular Automata
-                    </button>
-                    <button class="algorithm-btn" data-algorithm="noise">
-                        <i class="fas fa-water"></i> Flow Field
-                    </button>
-                    <button class="algorithm-btn" data-algorithm="voronoi">
-                        <i class="fas fa-gem"></i> Voronoi Patterns
-                    </button>
-                </div>
-            </div>
-            
-            <div class="control-group">
-                <h2><i class="fas fa-sliders-h"></i> Parameters</h2>
-                <div class="slider-container">
-                    <label>
-                        <span>Animation Speed</span>
-                        <span class="value" id="speed-value">1.0</span>
-                    </label>
-                    <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
-                </div>
-                
-                <div class="slider-container">
-                    <label>
-                        <span>Particle Count</span>
-                        <span class="value" id="particle-count-value">200</span>
-                    </label>
-                    <input type="range" id="particle-count" min="50" max="1000" step="10" value="200">
-                </div>
-                
-                <div class="slider-container">
-                    <label>
-                        <span>Noise Scale</span>
-                        <span class="value" id="noise-scale-value">0.01</span>
-                    </label>
-                    <input type="range" id="noise-scale" min="0.001" max="0.05" step="0.001" value="0.01">
-                </div>
-                
-                <div class="slider-container">
-                    <label>
-                        <span>Color Intensity</span>
-                        <span class="value" id="color-intensity-value">0.8</span>
-                    </label>
-                    <input type="range" id="color-intensity" min="0.1" max="1" step="0.1" value="0.8">
-                </div>
-                
-                <div class="slider-container">
-                    <label>
-                        <span>Particle Size</span>
-                        <span class="value" id="particle-size-value">2.0</span>
-                    </label>
-                    <input type="range" id="particle-size" min="0.5" max="8" step="0.1" value="2">
-                </div>
-            </div>
-            
-            <div class="control-group">
-                <h2><i class="fas fa-palette"></i> Presets</h2>
-                <div class="presets">
-                    <button class="preset-btn" data-preset="cosmic">Cosmic</button>
-                    <button class="preset-btn" data-preset="ocean">Ocean</button>
-                    <button class="preset-btn" data-preset="fire">Fire</button>
-                    <button class="preset-btn" data-preset="forest">Forest</button>
-                    <button class="preset-btn" data-preset="neon">Neon</button>
-                    <button class="preset-btn" data-preset="rainbow">Rainbow</button>
-                </div>
-            </div>
-            
-            <div class="control-group">
-                <h2><i class="fas fa-gamepad"></i> Controls</h2>
-                <div class="buttons">
-                    <button id="reset-btn"><i class="fas fa-sync"></i> Reset</button>
-                    <button id="randomize-btn" class="btn-accent"><i class="fas fa-random"></i> Randomize</button>
-                    <button id="screenshot-btn"><i class="fas fa-camera"></i> Screenshot</button>
-                    <button id="fullscreen-btn"><i class="fas fa-expand"></i> Fullscreen</button>
-                </div>
-            </div>
-            
-            <div class="instructions">
-                <h3><i class="fas fa-info-circle"></i> Interaction Guide</h3>
-                <ul>
-                    <li><span class="key">Mouse Move</span>: Influence particle movement</li>
-                    <li><span class="key">Mouse Click</span>: Create new elements</li>
-                    <li><span class="key">Mouse Wheel</span>: Adjust particle size</li>
-                    <li><span class="key">Keys 1-5</span>: Switch algorithms</li>
-                    <li><span class="key">Spacebar</span>: Pause/resume animation</li>
-                    <li><span class="key">R</span>: Reset canvas</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    
-    <footer>
-        <p>Generative Art Studio v2.0 | Created with HTML5 Canvas, JavaScript & ❤️</p>
-    </footer>
+    <div class="ambient-bg"></div>
 
+    <div class="app-container">
+        <!-- Main Canvas -->
+        <div class="canvas-wrapper" id="canvas-wrapper">
+            <canvas id="artCanvas"></canvas>
+            
+            <!-- Header Overlay -->
+            <div class="header-overlay fade-in">
+                <div class="header-content">
+                    <h1>AETHER</h1>
+                    <div class="tagline">Interactive Generative Studio</div>
+                </div>
+            </div>
+
+            <!-- Stats Overlay -->
+            <div class="stats-overlay">
+                FPS: <span id="fps-counter">60</span> | ENTITIES: <span id="entity-counter">0</span>
+            </div>
+        </div>
+
+        <!-- Toggle Button -->
+        <button class="toggle-controls" id="toggle-btn" aria-label="Toggle Controls">
+            <i class="fas fa-sliders-h"></i>
+        </button>
+
+        <!-- Controls Side Panel -->
+        <aside class="controls-panel" id="controls-panel">
+            <div class="panel-header">
+                <span class="panel-title">Configuration</span>
+                <button class="btn-glass" style="padding: 5px 10px; border-radius: 6px;" id="close-panel-mobile"><i class="fas fa-chevron-down"></i></button>
+            </div>
+            
+            <div class="panel-content">
+                <!-- Algorithm Selector -->
+                <div class="control-section">
+                    <h3><i class="fas fa-layer-group"></i> Algorithm</h3>
+                    <div class="algo-grid">
+                        <button class="algo-btn active" data-algo="particles">
+                            <i class="fas fa-atom"></i> Particles
+                        </button>
+                        <button class="algo-btn" data-algo="fractal">
+                            <i class="fas fa-tree"></i> Fractal
+                        </button>
+                        <button class="algo-btn" data-algo="automata">
+                            <i class="fas fa-border-all"></i> Automata
+                        </button>
+                        <button class="algo-btn" data-algo="flow">
+                            <i class="fas fa-wind"></i> Flow Field
+                        </button>
+                        <button class="algo-btn" data-algo="voronoi">
+                            <i class="fas fa-shapes"></i> Voronoi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Parameters -->
+                <div class="control-section">
+                    <h3><i class="fas fa-sliders"></i> Parameters</h3>
+                    
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Density / Count</span>
+                            <span class="slider-value" id="val-count">200</span>
+                        </div>
+                        <input type="range" class="range-input" id="inp-count" min="50" max="1500" step="10" value="200">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Speed / Evolution</span>
+                            <span class="slider-value" id="val-speed">1.0</span>
+                        </div>
+                        <input type="range" class="range-input" id="inp-speed" min="0" max="3" step="0.1" value="1.0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Chaos / Noise</span>
+                            <span class="slider-value" id="val-chaos">0.5</span>
+                        </div>
+                        <input type="range" class="range-input" id="inp-chaos" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Size / Scale</span>
+                            <span class="slider-value" id="val-size">2.0</span>
+                        </div>
+                        <input type="range" class="range-input" id="inp-size" min="0.5" max="10" step="0.1" value="2.0">
+                    </div>
+                </div>
+
+                <!-- Colors -->
+                <div class="control-section">
+                    <h3><i class="fas fa-palette"></i> Palette</h3>
+                    <div class="color-palettes">
+                        <button class="palette-btn active" style="background: linear-gradient(135deg, #00f3ff, #7000ff);" data-theme="cyber"></button>
+                        <button class="palette-btn" style="background: linear-gradient(135deg, #FF9D6C, #BB4E75);" data-theme="sunset"></button>
+                        <button class="palette-btn" style="background: linear-gradient(135deg, #00b09b, #96c93d);" data-theme="nature"></button>
+                        <button class="palette-btn" style="background: linear-gradient(135deg, #8E2DE2, #4A00E0);" data-theme="royal"></button>
+                        <button class="palette-btn" style="background: linear-gradient(135deg, #ff0000, #ffff00);" data-theme="fire"></button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="action-row">
+                    <button class="btn btn-glass" id="btn-reset">
+                        <i class="fas fa-rotate-right"></i> Reset
+                    </button>
+                    <button class="btn btn-primary" id="btn-save">
+                        <i class="fas fa-camera"></i> Save
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Application Logic -->
     <script>
-        // Main canvas setup
-        const canvas = document.getElementById('artCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas to full container size
-        function resizeCanvas() {
-            const container = document.getElementById('canvas-container');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-        }
-        
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        
-        // Global variables
-        let algorithm = 'particles';
-        let particles = [];
-        let branches = [];
-        let cells = [];
-        let noiseOffset = 0;
-        let mouseX = 0;
-        let mouseY = 0;
-        let mouseDown = false;
-        let animationId;
-        let paused = false;
-        let voronoiPoints = [];
-        let colorPalette = 'rainbow';
-        
-        // Configuration
-        const config = {
+        /**
+         * Core Utility & Configuration
+         */
+        const CONFIG = {
+            width: 0,
+            height: 0,
+            pixelRatio: window.devicePixelRatio || 1,
+            palettes: {
+                cyber: ['#00f3ff', '#7000ff', '#ff00aa', '#ffffff'],
+                sunset: ['#FF9D6C', '#BB4E75', '#633A82', '#FFE5D9'],
+                nature: ['#00b09b', '#96c93d', '#f7ff00', '#dbf26e'],
+                royal: ['#8E2DE2', '#4A00E0', '#00d2ff', '#e0c3fc'],
+                fire: ['#ff9966', '#ff5e62', '#ff0000', '#ffd700']
+            }
+        };
+
+        const STATE = {
+            algo: 'particles',
+            count: 200,
             speed: 1.0,
-            particleCount: 200,
-            noiseScale: 0.01,
-            colorIntensity: 0.8,
-            particleSize: 2,
-            connectionDistance: 100
+            chaos: 0.5,
+            size: 2.0,
+            theme: 'cyber',
+            paused: false,
+            pointer: { x: 0, y: 0, isDown: false, influence: 0 }
         };
+
+        // UI References
+        const canvas = document.getElementById('artCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on base
         
-        // Color palettes
-        const palettes = {
-            cosmic: ['#6a11cb', '#2575fc', '#00c9ff', '#92fe9d'],
-            ocean: ['#00c6ff', '#0072ff', '#00d2ff', '#3a7bd5'],
-            fire: ['#ff416c', '#ff4b2b', '#ff7e5f', '#feb47b'],
-            forest: ['#134e5e', '#71b280', '#38ef7d', '#11998e'],
-            neon: ['#ff00cc', '#333399', '#00ccff', '#ff0066'],
-            rainbow: ['#ff0000', '#ff7700', '#ffff00', '#00ff00', '#0000ff', '#8a2be2']
+        /**
+         * Input Handling
+         */
+        function initInput() {
+            const wrapper = document.getElementById('canvas-wrapper');
+            
+            const updatePointer = (x, y) => {
+                const rect = canvas.getBoundingClientRect();
+                STATE.pointer.x = x - rect.left;
+                STATE.pointer.y = y - rect.top;
+            };
+
+            wrapper.addEventListener('mousemove', e => {
+                updatePointer(e.clientX, e.clientY);
+                // Smooth influence ramp up
+                STATE.pointer.influence = Math.min(STATE.pointer.influence + 0.05, 1);
+            });
+            
+            wrapper.addEventListener('mousedown', e => {
+                STATE.pointer.isDown = true;
+                if (currentSystem && currentSystem.onInteract) currentSystem.onInteract('down');
+            });
+            
+            wrapper.addEventListener('mouseup', () => {
+                STATE.pointer.isDown = false;
+            });
+
+            wrapper.addEventListener('mouseleave', () => {
+                STATE.pointer.influence = 0;
+            });
+            
+            // Touch support
+            wrapper.addEventListener('touchmove', e => {
+                e.preventDefault();
+                updatePointer(e.touches[0].clientX, e.touches[0].clientY);
+                STATE.pointer.influence = 1;
+            }, { passive: false });
+        }
+
+        /**
+         * System Base Class
+         */
+        class System {
+            constructor() {
+                this.entities = [];
+            }
+            init() {}
+            update(dt) {}
+            draw(ctx) {}
+            resize() {}
+            onInteract(type) {}
+        }
+
+        /**
+         * Utils
+         */
+        const random = (min, max) => Math.random() * (max - min) + min;
+        const randomColor = () => {
+            const p = CONFIG.palettes[STATE.theme];
+            return p[Math.floor(Math.random() * p.length)];
         };
-        
-        // Initialize the selected algorithm
-        function initAlgorithm() {
-            particles = [];
-            branches = [];
-            cells = [];
-            voronoiPoints = [];
-            
-            switch(algorithm) {
-                case 'particles':
-                    initParticles();
-                    break;
-                case 'fractal':
-                    initFractal();
-                    break;
-                case 'automata':
-                    initAutomata();
-                    break;
-                case 'noise':
-                    initNoiseField();
-                    break;
-                case 'voronoi':
-                    initVoronoi();
-                    break;
+
+        /**
+         * 1. Particle System (Optimized with Object Pooling concept)
+         */
+        class ParticleSystem extends System {
+            constructor() {
+                super();
+                this.pool = [];
             }
-        }
-        
-        // Particle System
-        function initParticles() {
-            for (let i = 0; i < config.particleCount; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: (Math.random() - 0.5) * 2,
-                    size: Math.random() * 3 + 1,
-                    color: getRandomColor(),
-                    life: 1.0,
-                    history: []
-                });
-            }
-        }
-        
-        function updateParticles() {
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                
-                // Store position history for trails
-                p.history.push({x: p.x, y: p.y});
-                if (p.history.length > 15) {
-                    p.history.shift();
+
+            init() {
+                this.entities = [];
+                for(let i=0; i < STATE.count; i++) {
+                    this.spawn();
                 }
-                
-                // Mouse interaction
-                const dx = mouseX - p.x;
-                const dy = mouseY - p.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                
-                if (dist < 150) {
-                    const force = (150 - dist) / 150;
-                    p.vx += dx * force * 0.02;
-                    p.vy += dy * force * 0.02;
-                }
-                
-                // Apply velocity
-                p.x += p.vx * config.speed;
-                p.y += p.vy * config.speed;
-                
-                // Boundary check with wrapping
-                if (p.x < 0) p.x = canvas.width;
-                if (p.x > canvas.width) p.x = 0;
-                if (p.y < 0) p.y = canvas.height;
-                if (p.y > canvas.height) p.y = 0;
-                
-                // Slow down over time
-                p.vx *= 0.98;
-                p.vy *= 0.98;
-                
-                // Add some randomness
-                p.vx += (Math.random() - 0.5) * 0.1;
-                p.vy += (Math.random() - 0.5) * 0.1;
             }
-        }
-        
-        function drawParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw connections between close particles
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                
-                for (let j = i + 1; j < particles.length; j++) {
-                    const p2 = particles[j];
-                    const dx = p.x - p2.x;
-                    const dy = p.y - p2.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+            spawn(x, y) {
+                const p = this.pool.pop() || { x:0, y:0, vx:0, vy:0, size:0, color:'' };
+                p.x = x || random(0, CONFIG.width);
+                p.y = y || random(0, CONFIG.height);
+                p.vx = random(-1, 1) * STATE.speed;
+                p.vy = random(-1, 1) * STATE.speed;
+                p.size = random(1, STATE.size * 2);
+                p.color = randomColor();
+                this.entities.push(p);
+            }
+
+            update(dt) {
+                // Adjust count dynamically
+                if (this.entities.length < STATE.count) this.spawn();
+                if (this.entities.length > STATE.count) this.pool.push(this.entities.pop());
+
+                for (let i = 0; i < this.entities.length; i++) {
+                    const p = this.entities[i];
                     
-                    if (dist < config.connectionDistance) {
-                        const alpha = 0.3 * (1 - dist/config.connectionDistance);
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p2.x, p2.y);
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
+                    // Mouse interaction
+                    if (STATE.pointer.influence > 0) {
+                        const dx = p.x - STATE.pointer.x;
+                        const dy = p.y - STATE.pointer.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 200) {
+                            const force = (200 - dist) / 200;
+                            // Repel
+                            p.vx += (dx / dist) * force * 0.5 * STATE.speed;
+                            p.vy += (dy / dist) * force * 0.5 * STATE.speed;
+                        }
                     }
+
+                    p.x += p.vx * STATE.speed;
+                    p.y += p.vy * STATE.speed;
+
+                    // Deceleration
+                    p.vx *= 0.99;
+                    p.vy *= 0.99;
+
+                    // Bounce
+                    if (p.x < 0 || p.x > CONFIG.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > CONFIG.height) p.vy *= -1;
+                    
+                    // Keep in bounds hard clamp
+                    p.x = Math.max(0, Math.min(CONFIG.width, p.x));
+                    p.y = Math.max(0, Math.min(CONFIG.height, p.y));
                 }
             }
-            
-            // Draw particles with trails
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
+
+            draw(ctx) {
+                ctx.fillStyle = 'rgba(10, 10, 15, 0.2)'; // Trails
+                ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+
+                ctx.globalCompositeOperation = 'lighter';
                 
-                // Draw trail
-                for (let j = 0; j < p.history.length - 1; j++) {
-                    const point = p.history[j];
-                    const nextPoint = p.history[j + 1];
+                // Draw connections
+                ctx.beginPath();
+                const connectDist = 100 * STATE.size * 0.5;
+                
+                for (let i = 0; i < this.entities.length; i++) {
+                    const p = this.entities[i];
                     
-                    const alpha = j / p.history.length;
+                    // Draw particle
+                    ctx.fillStyle = p.color;
                     ctx.beginPath();
-                    ctx.moveTo(point.x, point.y);
-                    ctx.lineTo(nextPoint.x, nextPoint.y);
-                    ctx.strokeStyle = `${p.color}${Math.floor(alpha * 100).toString(16).padStart(2, '0')}`;
-                    ctx.lineWidth = p.size * alpha * 0.7;
-                    ctx.stroke();
-                }
-                
-                // Draw particle
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size * config.particleSize, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.fill();
-                
-                // Glow effect
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size * config.particleSize * 1.5, 0, Math.PI * 2);
-                const gradient = ctx.createRadialGradient(
-                    p.x, p.y, 0,
-                    p.x, p.y, p.size * config.particleSize * 1.5
-                );
-                gradient.addColorStop(0, p.color);
-                gradient.addColorStop(1, 'transparent');
-                ctx.fillStyle = gradient;
-                ctx.fill();
-            }
-        }
-        
-        // Fractal Tree
-        function initFractal() {
-            branches = [{
-                x: canvas.width / 2,
-                y: canvas.height,
-                angle: -Math.PI / 2,
-                length: 120,
-                depth: 0,
-                color: getRandomColor()
-            }];
-        }
-        
-        function updateFractal() {
-            // Grow the tree
-            if (branches.length < 800) {
-                const lastBranch = branches[branches.length - 1];
-                
-                if (lastBranch.depth < 10) {
-                    const newBranches = [];
-                    
-                    // Main branch
-                    newBranches.push({
-                        x: lastBranch.x + Math.cos(lastBranch.angle) * lastBranch.length,
-                        y: lastBranch.y + Math.sin(lastBranch.angle) * lastBranch.length,
-                        angle: lastBranch.angle,
-                        length: lastBranch.length * 0.75,
-                        depth: lastBranch.depth + 1,
-                        color: getRandomColor()
-                    });
-                    
-                    // Left branch
-                    newBranches.push({
-                        x: lastBranch.x + Math.cos(lastBranch.angle) * lastBranch.length,
-                        y: lastBranch.y + Math.sin(lastBranch.angle) * lastBranch.length,
-                        angle: lastBranch.angle - Math.PI/5 + (Math.random() - 0.5) * 0.5,
-                        length: lastBranch.length * 0.65,
-                        depth: lastBranch.depth + 1,
-                        color: getRandomColor()
-                    });
-                    
-                    // Right branch
-                    newBranches.push({
-                        x: lastBranch.x + Math.cos(lastBranch.angle) * lastBranch.length,
-                        y: lastBranch.y + Math.sin(lastBranch.angle) * lastBranch.length,
-                        angle: lastBranch.angle + Math.PI/5 + (Math.random() - 0.5) * 0.5,
-                        length: lastBranch.length * 0.65,
-                        depth: lastBranch.depth + 1,
-                        color: getRandomColor()
-                    });
-                    
-                    branches.push(...newBranches);
-                }
-            }
-        }
-        
-        function drawFractal() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            for (let i = 0; i < branches.length; i++) {
-                const b = branches[i];
-                
-                ctx.strokeStyle = b.color;
-                ctx.lineWidth = Math.max(1, 10 - b.depth * 0.8);
-                
-                ctx.beginPath();
-                ctx.moveTo(b.x, b.y);
-                
-                const endX = b.x + Math.cos(b.angle) * b.length;
-                const endY = b.y + Math.sin(b.angle) * b.length;
-                
-                ctx.lineTo(endX, endY);
-                ctx.stroke();
-                
-                // Add leaf at the end of branches
-                if (b.depth > 7) {
-                    ctx.beginPath();
-                    ctx.arc(endX, endY, 5, 0, Math.PI * 2);
-                    ctx.fillStyle = getRandomColor();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                     ctx.fill();
-                }
-            }
-        }
-        
-        // Cellular Automata
-        function initAutomata() {
-            // Create a grid of cells
-            const cellSize = 6;
-            const cols = Math.ceil(canvas.width / cellSize);
-            const rows = Math.ceil(canvas.height / cellSize);
-            
-            cells = [];
-            for (let y = 0; y < rows; y++) {
-                cells[y] = [];
-                for (let x = 0; x < cols; x++) {
-                    // Random initial state
-                    cells[y][x] = Math.random() > 0.7 ? 1 : 0;
-                }
-            }
-        }
-        
-        function updateAutomata() {
-            const cellSize = 6;
-            const cols = Math.ceil(canvas.width / cellSize);
-            const rows = Math.ceil(canvas.height / cellSize);
-            
-            // Create a copy of the current state
-            const newCells = [];
-            for (let y = 0; y < rows; y++) {
-                newCells[y] = [];
-                for (let x = 0; x < cols; x++) {
-                    newCells[y][x] = cells[y][x];
-                }
-            }
-            
-            // Apply Conway's Game of Life rules
-            for (let y = 0; y < rows; y++) {
-                for (let x = 0; x < cols; x++) {
-                    let neighbors = 0;
-                    
-                    // Count live neighbors
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            if (dx === 0 && dy === 0) continue;
+
+                    // Optional connections (expensive, limit checks)
+                    if (STATE.count < 300) {
+                        for (let j = i + 1; j < this.entities.length; j++) {
+                            const p2 = this.entities[j];
+                            const dx = p.x - p2.x;
+                            const dy = p.y - p2.y;
+                            if (Math.abs(dx) > connectDist || Math.abs(dy) > connectDist) continue; // Fast reject
                             
-                            const nx = (x + dx + cols) % cols;
-                            const ny = (y + dy + rows) % rows;
-                            
-                            neighbors += cells[ny][nx];
+                            const d2 = dx*dx + dy*dy;
+                            if (d2 < connectDist * connectDist) {
+                                ctx.strokeStyle = `rgba(255,255,255, ${0.1 * (1 - Math.sqrt(d2)/connectDist)})`;
+                                ctx.beginPath();
+                                ctx.moveTo(p.x, p.y);
+                                ctx.lineTo(p2.x, p2.y);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            }
+
+            onInteract(type) {
+                if(type === 'down') {
+                    for(let i=0; i<10; i++) this.spawn(STATE.pointer.x, STATE.pointer.y);
+                }
+            }
+        }
+
+        /**
+         * 2. Fractal Tree (Recursive)
+         */
+        class FractalSystem extends System {
+            constructor() {
+                super();
+                this.angleOffset = 0;
+            }
+
+            init() {
+                // No per-frame entities, just draw
+            }
+
+            drawTree(x, y, len, angle, depth) {
+                ctx.beginPath();
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                
+                // Styling
+                ctx.strokeStyle = `hsl(${(depth * 20 + this.angleOffset * 50) % 360}, 70%, 60%)`;
+                ctx.lineWidth = depth * 0.8 * (STATE.size/2);
+                ctx.globalAlpha = 1;
+                
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, -len);
+                ctx.stroke();
+
+                if (depth > 0) {
+                    // Interactive param
+                    const spread = (Math.PI / 4) * STATE.chaos + (Math.sin(Date.now() * 0.001 * STATE.speed) * 0.1);
+                    const mult = 0.67;
+                    
+                    ctx.translate(0, -len);
+                    
+                    // Branch 1
+                    ctx.save();
+                    this.drawTree(0, 0, len * mult, spread, depth - 1);
+                    ctx.restore();
+                    
+                    // Branch 2
+                    ctx.save();
+                    this.drawTree(0, 0, len * mult, -spread, depth - 1);
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = 'rgba(5, 5, 10, 0.5)'; // Fade effect
+                ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+                
+                this.angleOffset += 0.01 * STATE.speed;
+                
+                const trunkLen = 150 * (CONFIG.height / 800);
+                const startDepth = Math.floor(STATE.count / 20) + 5; // Scale depth with count slider
+                const clampedDepth = Math.min(startDepth, 12); // Prevent freeze
+                
+                // Root
+                this.drawTree(CONFIG.width / 2, CONFIG.height, trunkLen, 0, clampedDepth);
+            }
+        }
+
+        /**
+         * 3. Flow Field (Perlin-ish Noise)
+         */
+        class FlowField extends System {
+            init() {
+                this.particles = [];
+                for(let i=0; i<STATE.count * 2; i++) {
+                    this.resetParticle({});
+                }
+                this.zOff = 0;
+                
+                // Clear fully
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0,0, CONFIG.width, CONFIG.height);
+            }
+            
+            resetParticle(p) {
+                p.x = Math.random() * CONFIG.width;
+                p.y = Math.random() * CONFIG.height;
+                p.vx = 0;
+                p.vy = 0;
+                p.age = 0;
+                p.maxAge = Math.random() * 200 + 100;
+                p.color = randomColor();
+                this.particles.push(p);
+            }
+
+            fakeNoise(x, y, z) {
+                return Math.sin(x * 0.005 + z) * Math.cos(y * 0.005 + z) * Math.PI * 2;
+            }
+
+            update(dt) {
+                this.zOff += 0.005 * STATE.speed;
+                
+                while(this.particles.length < STATE.count * 2) this.resetParticle({});
+                if(this.particles.length > STATE.count * 2) this.particles.splice(0, this.particles.length - STATE.count * 2);
+
+                for(let p of this.particles) {
+                    const angle = this.fakeNoise(p.x, p.y, this.zOff);
+                    
+                    p.vx += Math.cos(angle) * 0.2;
+                    p.vy += Math.sin(angle) * 0.2;
+                    
+                    // Mouse disturb
+                    if (STATE.pointer.influence > 0) {
+                        const dx = p.x - STATE.pointer.x;
+                        const dy = p.y - STATE.pointer.y;
+                        const d = Math.sqrt(dx*dx + dy*dy);
+                        if (d < 150) {
+                            p.vx += (dx/d) * 0.5;
+                            p.vy += (dy/d) * 0.5;
                         }
                     }
                     
-                    // Apply rules
-                    if (cells[y][x] === 1) {
-                        // Cell is alive
-                        if (neighbors < 2 || neighbors > 3) {
-                            newCells[y][x] = 0; // Dies
-                        }
-                    } else {
-                        // Cell is dead
-                        if (neighbors === 3) {
-                            newCells[y][x] = 1; // Becomes alive
-                        }
+                    // Limit speed
+                    const vel = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+                    if (vel > 4) {
+                        p.vx = (p.vx/vel) * 4;
+                        p.vy = (p.vy/vel) * 4;
+                    }
+
+                    p.x += p.vx * STATE.speed;
+                    p.y += p.vy * STATE.speed;
+                    p.age++;
+
+                    if (p.x < 0 || p.x > CONFIG.width || p.y < 0 || p.y > CONFIG.height || p.age > p.maxAge) {
+                        // Respawn randomly
+                        p.x = Math.random() * CONFIG.width;
+                        p.y = Math.random() * CONFIG.height;
+                        p.age = 0;
+                        p.vx = 0; p.vy = 0;
                     }
                 }
             }
-            
-            // Update the cells array
-            cells = newCells;
-        }
-        
-        function drawAutomata() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            const cellSize = 6;
-            const cols = Math.ceil(canvas.width / cellSize);
-            const rows = Math.ceil(canvas.height / cellSize);
-            
-            for (let y = 0; y < rows; y++) {
-                for (let x = 0; x < cols; x++) {
-                    if (cells[y][x] === 1) {
-                        const hue = (x * y * 0.5 + Date.now() * 0.02) % 360;
-                        ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
-                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-                        
-                        // Add glow effect
-                        ctx.beginPath();
-                        ctx.arc(
-                            x * cellSize + cellSize/2, 
-                            y * cellSize + cellSize/2, 
-                            cellSize * 0.8, 
-                            0, 
-                            Math.PI * 2
-                        );
-                        const gradient = ctx.createRadialGradient(
-                            x * cellSize + cellSize/2, 
-                            y * cellSize + cellSize/2, 
-                            0,
-                            x * cellSize + cellSize/2, 
-                            y * cellSize + cellSize/2, 
-                            cellSize * 0.8
-                        );
-                        gradient.addColorStop(0, `hsla(${hue}, 80%, 60%, 0.8)`);
-                        gradient.addColorStop(1, 'transparent');
-                        ctx.fillStyle = gradient;
-                        ctx.fill();
-                    }
-                }
-            }
-        }
-        
-        // Perlin Noise Flow Field
-        function initNoiseField() {
-            particles = [];
-            for (let i = 0; i < config.particleCount; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    vx: 0,
-                    vy: 0,
-                    size: Math.random() * 2 + 1,
-                    color: getRandomColor(),
-                    history: []
-                });
-            }
-        }
-        
-        // Simplified Perlin noise function
-        function noise(x, y) {
-            return Math.sin(x * 0.01) * Math.cos(y * 0.01) * 0.5 + 0.5;
-        }
-        
-        function updateNoiseField() {
-            noiseOffset += 0.01 * config.speed;
-            
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
+
+            draw(ctx) {
+                // Fade out slowly
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
                 
-                // Get noise value at particle position
-                const angle = noise(p.x, p.y + noiseOffset) * Math.PI * 2;
-                
-                // Apply force in the direction of the noise gradient
-                p.vx += Math.cos(angle) * 0.1;
-                p.vy += Math.sin(angle) * 0.1;
-                
-                // Limit velocity
-                const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-                if (speed > 3) {
-                    p.vx = (p.vx / speed) * 3;
-                    p.vy = (p.vy / speed) * 3;
-                }
-                
-                // Update position
-                p.x += p.vx;
-                p.y += p.vy;
-                
-                // Store position history for trails
-                p.history.push({x: p.x, y: p.y});
-                if (p.history.length > 20) {
-                    p.history.shift();
-                }
-                
-                // Boundary check with wrapping
-                if (p.x < 0) p.x = canvas.width;
-                if (p.x > canvas.width) p.x = 0;
-                if (p.y < 0) p.y = canvas.height;
-                if (p.y > canvas.height) p.y = 0;
-            }
-        }
-        
-        function drawNoiseField() {
-            ctx.fillStyle = 'rgba(10, 10, 20, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                
-                // Draw particle trail
-                for (let j = 0; j < p.history.length - 1; j++) {
-                    const point = p.history[j];
-                    const nextPoint = p.history[j + 1];
-                    
-                    const alpha = j / p.history.length;
+                ctx.lineWidth = STATE.size;
+                for(let p of this.particles) {
+                    ctx.strokeStyle = p.color;
                     ctx.beginPath();
-                    ctx.moveTo(point.x, point.y);
-                    ctx.lineTo(nextPoint.x, nextPoint.y);
-                    ctx.strokeStyle = `${p.color}${Math.floor(alpha * 100).toString(16).padStart(2, '0')}`;
-                    ctx.lineWidth = p.size * alpha * config.particleSize;
+                    ctx.moveTo(p.x - p.vx, p.y - p.vy);
+                    ctx.lineTo(p.x, p.y);
                     ctx.stroke();
                 }
-                
-                // Draw particle
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size * config.particleSize, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.fill();
             }
         }
-        
-        // Voronoi Diagram
-        function initVoronoi() {
-            voronoiPoints = [];
-            for (let i = 0; i < 50; i++) {
-                voronoiPoints.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    color: getRandomColor(),
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5
-                });
+
+        /**
+         * 4. Voronoi (Approximation optimized)
+         * Using cone-draw method is cool but hard to perfect.
+         * We'll use a brute-force on a low-res grid, then upscale.
+         */
+        class VoronoiSystem extends System {
+            init() {
+                this.points = [];
+                // Limit points for performance
+                for(let i=0; i<Math.min(STATE.count, 50); i++) {
+                    this.points.push({
+                        x: Math.random() * CONFIG.width,
+                        y: Math.random() * CONFIG.height,
+                        vx: (Math.random()-0.5)*2,
+                        vy: (Math.random()-0.5)*2,
+                        color: randomColor()
+                    });
+                }
+                
+                // Create offscreen canvas for low-res processing
+                this.offCanvas = document.createElement('canvas');
+                this.offCtx = this.offCanvas.getContext('2d');
+                this.resize();
             }
-        }
-        
-        function updateVoronoi() {
-            for (let i = 0; i < voronoiPoints.length; i++) {
-                const p = voronoiPoints[i];
-                
-                // Move points slowly
-                p.x += p.vx * config.speed;
-                p.y += p.vy * config.speed;
-                
-                // Boundary check with bouncing
-                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-                
-                // Keep within bounds
-                p.x = Math.max(0, Math.min(canvas.width, p.x));
-                p.y = Math.max(0, Math.min(canvas.height, p.y));
+
+            resize() {
+                if(!this.offCanvas) return;
+                // Render at 10% resolution for speed + nice blur effect
+                this.scaleFactor = 0.15; // Higher = less blurry/blocky but slower
+                this.offCanvas.width = CONFIG.width * this.scaleFactor;
+                this.offCanvas.height = CONFIG.height * this.scaleFactor;
             }
-        }
-        
-        function drawVoronoi() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw Voronoi cells
-            const imageData = ctx.createImageData(canvas.width, canvas.height);
-            const data = imageData.data;
-            
-            for (let y = 0; y < canvas.height; y++) {
-                for (let x = 0; x < canvas.width; x++) {
-                    let minDist = Infinity;
-                    let closestPoint = null;
+
+            update(dt) {
+                // Update points
+                for(let p of this.points) {
+                    p.x += p.vx * STATE.speed;
+                    p.y += p.vy * STATE.speed;
                     
-                    // Find the closest point
-                    for (let i = 0; i < voronoiPoints.length; i++) {
-                        const p = voronoiPoints[i];
-                        const dx = x - p.x;
-                        const dy = y - p.y;
-                        const dist = dx * dx + dy * dy;
+                    if(p.x < 0 || p.x > CONFIG.width) p.vx *= -1;
+                    if(p.y < 0 || p.y > CONFIG.height) p.vy *= -1;
+                    
+                    // Keep in bounds
+                    p.x = Math.max(0, Math.min(CONFIG.width, p.x));
+                    p.y = Math.max(0, Math.min(CONFIG.height, p.y));
+                }
+                
+                // Sync count roughly (if mismatched significantly)
+                const target = Math.min(STATE.count, 60); // Cap at 60 for perf
+                if (this.points.length < target) {
+                    this.points.push({x: random(0,CONFIG.width), y:random(0,CONFIG.height), vx:random(-1,1), vy:random(-1,1), color:randomColor()});
+                } else if(this.points.length > target) {
+                    this.points.pop();
+                }
+            }
+
+            draw(ctx) {
+                const w = this.offCanvas.width;
+                const h = this.offCanvas.height;
+                const d = this.offCtx.createImageData(w, h);
+                const scaledPoints = this.points.map(p => ({
+                    x: p.x * this.scaleFactor,
+                    y: p.y * this.scaleFactor,
+                    r: parseInt(p.color.slice(1,3), 16),
+                    g: parseInt(p.color.slice(3,5), 16),
+                    b: parseInt(p.color.slice(5,7), 16)
+                }));
+
+                // Pixel processing
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        let minDist = Infinity;
+                        let closest = scaledPoints[0];
                         
-                        if (dist < minDist) {
-                            minDist = dist;
-                            closestPoint = p;
+                        // Optimized search
+                        for (let i = 0; i < scaledPoints.length; i++) {
+                            const p = scaledPoints[i];
+                            const dx = x - p.x;
+                            const dy = y - p.y;
+                            const dist = dx*dx + dy*dy;
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closest = p;
+                            }
+                        }
+                        
+                        const idx = (y * w + x) * 4;
+                        d.data[idx] = closest.r;
+                        d.data[idx+1] = closest.g;
+                        d.data[idx+2] = closest.b;
+                        d.data[idx+3] = 255;
+                    }
+                }
+                
+                this.offCtx.putImageData(d, 0, 0);
+                
+                // Draw upscaled
+                ctx.imageSmoothingEnabled = true; // Smooth out the blocks
+                ctx.drawImage(this.offCanvas, 0, 0, CONFIG.width, CONFIG.height);
+                
+                // Draw seeds
+                for(let p of this.points) {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4 * STATE.size, 0, Math.PI*2);
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        /**
+         * 5. Automata (Conway's Game of Life)
+         */
+        class AutomataSystem extends System {
+            init() {
+                this.cellSize = 10;
+                this.cols = Math.ceil(CONFIG.width / this.cellSize);
+                this.rows = Math.ceil(CONFIG.height / this.cellSize);
+                this.grid = new Uint8Array(this.cols * this.rows);
+                this.buffer = new Uint8Array(this.cols * this.rows); // Secondary buffer
+                
+                // Randomize
+                for(let i=0; i<this.grid.length; i++) {
+                    this.grid[i] = Math.random() > (1 - STATE.chaos * 0.5) ? 1 : 0;
+                }
+                
+                this.tick = 0;
+            }
+
+            resize() {
+                this.init(); // Re-init on resize simple
+            }
+
+            update(dt) {
+                if (this.tick++ % Math.max(1, Math.floor(5 - STATE.speed)) !== 0) return;
+
+                // Game of Logic
+                for (let y = 0; y < this.rows; y++) {
+                    for (let x = 0; x < this.cols; x++) {
+                        const idx = y * this.cols + x;
+                        
+                        // Count neighbors
+                        let neighbors = 0;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                const nx = (x + dx + this.cols) % this.cols;
+                                const ny = (y + dy + this.rows) % this.rows;
+                                neighbors += this.grid[ny * this.cols + nx];
+                            }
+                        }
+                        
+                        const cell = this.grid[idx];
+                        if (cell === 1 && (neighbors < 2 || neighbors > 3)) {
+                            this.buffer[idx] = 0;
+                        } else if (cell === 0 && neighbors === 3) {
+                            this.buffer[idx] = 1;
+                        } else {
+                            this.buffer[idx] = cell;
                         }
                     }
+                }
+                
+                // Interact - paint
+                if(STATE.pointer.isDown) {
+                    const gx = Math.floor(STATE.pointer.x / this.cellSize);
+                    const gy = Math.floor(STATE.pointer.y / this.cellSize);
+                    if(gx>=0 && gx<this.cols && gy>=0 && gy<this.rows) {
+                         this.buffer[gy * this.cols + gx] = 1;
+                         // Brush
+                         if(gx+1<this.cols) this.buffer[gy * this.cols + gx + 1] = 1;
+                         if(gy+1<this.rows) this.buffer[(gy+1) * this.cols + gx] = 1;
+                    }
+                }
+
+                // Swap
+                [this.grid, this.buffer] = [this.buffer, this.grid];
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Trail
+                ctx.fillRect(0,0, CONFIG.width, CONFIG.height);
+                
+                const p = CONFIG.palettes[STATE.theme];
+                const colorAlive = p[1];
+                
+                ctx.fillStyle = colorAlive;
+                for (let y = 0; y < this.rows; y++) {
+                    for (let x = 0; x < this.cols; x++) {
+                        if (this.grid[y * this.cols + x]) {
+                            ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize - 1, this.cellSize - 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Main Engine
+         */
+        let currentSystem = null;
+        const systems = {
+            particles: new ParticleSystem(),
+            fractal: new FractalSystem(),
+            flow: new FlowField(),
+            voronoi: new VoronoiSystem(),
+            automata: new AutomataSystem()
+        };
+
+        function switchAlgo(name) {
+            STATE.algo = name;
+            currentSystem = systems[name];
+            
+            // UI Update
+            document.querySelectorAll('.algo-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.algo === name);
+            });
+            
+            // Re-init
+            handleResize(); // Ensures sizes are correct
+            currentSystem.init();
+        }
+
+        function handleResize() {
+            const container = document.getElementById('canvas-wrapper');
+            CONFIG.width = container.clientWidth;
+            CONFIG.height = container.clientHeight;
+            
+            canvas.width = CONFIG.width;
+            canvas.height = CONFIG.height;
+            
+            if(currentSystem) currentSystem.resize();
+        }
+
+        // Loop
+        let lastTime = 0;
+        let frames = 0;
+        let lastFpsTime = 0;
+
+        function loop(timestamp) {
+            const dt = timestamp - lastTime;
+            lastTime = timestamp;
+
+            if (!STATE.paused && currentSystem) {
+                currentSystem.update(dt);
+                currentSystem.draw(ctx);
+                
+                // Update Entity Counter
+                const count = currentSystem.entities ? currentSystem.entities.length : 
+                              (STATE.algo === 'voronoi' ? currentSystem.points.length : 'N/A');
+                document.getElementById('entity-counter').innerText = count;
+            }
+
+            // FPS
+            frames++;
+            if (timestamp - lastFpsTime >= 1000) {
+                document.getElementById('fps-counter').innerText = frames;
+                frames = 0;
+                lastFpsTime = timestamp;
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        /**
+         * Startup & Events
+         */
+        window.addEventListener('load', () => {
+            initInput();
+            handleResize();
+            switchAlgo('particles'); // Default
+            requestAnimationFrame(loop);
+            
+            // UI Bindings
+            window.addEventListener('resize', handleResize);
+            
+            // Toggle config
+            const panel = document.getElementById('controls-panel');
+            const toggle = document.getElementById('toggle-btn');
+            const close = document.getElementById('close-panel-mobile');
+            
+            toggle.addEventListener('click', () => panel.classList.toggle('collapsed'));
+            close.addEventListener('click', () => panel.classList.add('collapsed'));
+
+            // Algo Buttons
+            document.querySelectorAll('.algo-btn').forEach(btn => {
+                btn.addEventListener('click', () => switchAlgo(btn.dataset.algo));
+            });
+
+            // Sliders
+            const bindSlider = (id, key, displayId) => {
+                const el = document.getElementById(id);
+                const disp = document.getElementById(displayId);
+                el.addEventListener('input', e => {
+                    let val = parseFloat(e.target.value);
+                    STATE[key] = val;
+                    disp.innerText = val;
                     
-                    // Set pixel color based on closest point
-                    const idx = (y * canvas.width + x) * 4;
-                    const color = hexToRgb(closestPoint.color);
-                    
-                    data[idx] = color.r;     // R
-                    data[idx + 1] = color.g; // G
-                    data[idx + 2] = color.b; // B
-                    data[idx + 3] = 255;     // A
-                }
-            }
-            
-            ctx.putImageData(imageData, 0, 0);
-            
-            // Draw points
-            for (let i = 0; i < voronoiPoints.length; i++) {
-                const p = voronoiPoints[i];
-                
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
-                ctx.strokeStyle = p.color;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-        }
-        
-        // Helper functions
-        function getRandomColor() {
-            const palette = palettes[colorPalette];
-            return palette[Math.floor(Math.random() * palette.length)];
-        }
-        
-        function hexToRgb(hex) {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : {r: 0, g: 0, b: 0};
-        }
-        
-        // Animation loop
-        function animate() {
-            if (!paused) {
-                switch(algorithm) {
-                    case 'particles':
-                        updateParticles();
-                        drawParticles();
-                        break;
-                    case 'fractal':
-                        updateFractal();
-                        drawFractal();
-                        break;
-                    case 'automata':
-                        updateAutomata();
-                        drawAutomata();
-                        break;
-                    case 'noise':
-                        updateNoiseField();
-                        drawNoiseField();
-                        break;
-                    case 'voronoi':
-                        updateVoronoi();
-                        drawVoronoi();
-                        break;
-                }
-            }
-            
-            animationId = requestAnimationFrame(animate);
-        }
-        
-        // Event listeners
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
-        });
-        
-        canvas.addEventListener('mousedown', () => {
-            mouseDown = true;
-            
-            // Add particles on click
-            if (algorithm === 'particles' || algorithm === 'noise') {
-                for (let i = 0; i < 30; i++) {
-                    particles.push({
-                        x: mouseX + (Math.random() - 0.5) * 100,
-                        y: mouseY + (Math.random() - 0.5) * 100,
-                        vx: (Math.random() - 0.5) * 4,
-                        vy: (Math.random() - 0.5) * 4,
-                        size: Math.random() * 3 + 1,
-                        color: getRandomColor(),
-                        life: 1.0
-                    });
-                }
-            }
-            
-            // Add Voronoi point
-            if (algorithm === 'voronoi') {
-                voronoiPoints.push({
-                    x: mouseX,
-                    y: mouseY,
-                    color: getRandomColor(),
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5
+                    // Update CSS var for slider fill
+                    const percent = ((val - el.min) / (el.max - el.min)) * 100;
+                    el.style.setProperty('--value', percent + '%');
                 });
-            }
-        });
-        
-        canvas.addEventListener('mouseup', () => {
-            mouseDown = false;
-        });
-        
-        canvas.addEventListener('click', () => {
-            // Add particles on click
-            if (algorithm === 'particles' || algorithm === 'noise') {
-                for (let i = 0; i < 30; i++) {
-                    particles.push({
-                        x: mouseX + (Math.random() - 0.5) * 100,
-                        y: mouseY + (Math.random() - 0.5) * 100,
-                        vx: (Math.random() - 0.5) * 4,
-                        vy: (Math.random() - 0.5) * 4,
-                        size: Math.random() * 3 + 1,
-                        color: getRandomColor(),
-                        life: 1.0
-                    });
-                }
-            }
-            
-            // Add Voronoi point
-            if (algorithm === 'voronoi') {
-                voronoiPoints.push({
-                    x: mouseX,
-                    y: mouseY,
-                    color: getRandomColor(),
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5
+                
+                // Init fill
+                const percent = ((el.value - el.min) / (el.max - el.min)) * 100;
+                el.style.setProperty('--value', percent + '%');
+            };
+
+            bindSlider('inp-count', 'count', 'val-count');
+            bindSlider('inp-speed', 'speed', 'val-speed');
+            bindSlider('inp-chaos', 'chaos', 'val-chaos');
+            bindSlider('inp-size', 'size', 'val-size');
+
+            // Themes
+            document.querySelectorAll('.palette-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    STATE.theme = btn.dataset.theme;
+                    document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    if(STATE.algo === 'flow' || STATE.algo === 'particles') currentSystem.init(); // Refresh for colors
                 });
-            }
-        });
-        
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            config.particleSize = Math.max(0.5, Math.min(10, config.particleSize + (e.deltaY > 0 ? -0.2 : 0.2)));
-            document.getElementById('particle-size-value').textContent = config.particleSize.toFixed(1);
-        });
-        
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case '1':
-                    setAlgorithm('particles');
-                    break;
-                case '2':
-                    setAlgorithm('fractal');
-                    break;
-                case '3':
-                    setAlgorithm('automata');
-                    break;
-                case '4':
-                    setAlgorithm('noise');
-                    break;
-                case '5':
-                    setAlgorithm('voronoi');
-                    break;
-                case ' ':
-                    paused = !paused;
-                    break;
-                case 'r':
-                case 'R':
-                    initAlgorithm();
-                    break;
-            }
-        });
-        
-        // UI Controls
-        function setAlgorithm(newAlgorithm) {
-            algorithm = newAlgorithm;
-            
-            // Update UI
-            document.querySelectorAll('.algorithm-btn').forEach(btn => {
-                btn.classList.remove('active');
             });
-            document.querySelector(`.algorithm-btn[data-algorithm="${algorithm}"]`).classList.add('active');
-            
-            // Reinitialize
-            initAlgorithm();
-        }
-        
-        document.querySelectorAll('.algorithm-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                setAlgorithm(btn.dataset.algorithm);
+
+            // Actions
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                ctx.clearRect(0,0,CONFIG.width, CONFIG.height);
+                currentSystem.init();
+            });
+
+            document.getElementById('btn-save').addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `Aether-${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
             });
         });
-        
-        // Slider controls
-        document.getElementById('speed').addEventListener('input', (e) => {
-            config.speed = parseFloat(e.target.value);
-            document.getElementById('speed-value').textContent = config.speed.toFixed(1);
-        });
-        
-        document.getElementById('particle-count').addEventListener('input', (e) => {
-            config.particleCount = parseInt(e.target.value);
-            document.getElementById('particle-count-value').textContent = config.particleCount;
-            
-            if (algorithm === 'particles' || algorithm === 'noise') {
-                // Adjust particle count
-                while (particles.length < config.particleCount) {
-                    particles.push({
-                        x: Math.random() * canvas.width,
-                        y: Math.random() * canvas.height,
-                        vx: (Math.random() - 0.5) * 2,
-                        vy: (Math.random() - 0.5) * 2,
-                        size: Math.random() * 3 + 1,
-                        color: getRandomColor(),
-                        life: 1.0
-                    });
-                }
-                
-                while (particles.length > config.particleCount) {
-                    particles.pop();
-                }
-            }
-        });
-        
-        document.getElementById('noise-scale').addEventListener('input', (e) => {
-            config.noiseScale = parseFloat(e.target.value);
-            document.getElementById('noise-scale-value').textContent = config.noiseScale.toFixed(3);
-        });
-        
-        document.getElementById('color-intensity').addEventListener('input', (e) => {
-            config.colorIntensity = parseFloat(e.target.value);
-            document.getElementById('color-intensity-value').textContent = config.colorIntensity.toFixed(1);
-        });
-        
-        document.getElementById('particle-size').addEventListener('input', (e) => {
-            config.particleSize = parseFloat(e.target.value);
-            document.getElementById('particle-size-value').textContent = config.particleSize.toFixed(1);
-        });
-        
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            initAlgorithm();
-        });
-        
-        document.getElementById('randomize-btn').addEventListener('click', () => {
-            // Randomize parameters
-            config.speed = Math.random() * 2 + 0.5;
-            config.particleCount = Math.floor(Math.random() * 800) + 100;
-            config.noiseScale = Math.random() * 0.04 + 0.005;
-            config.colorIntensity = Math.random() * 0.8 + 0.2;
-            config.particleSize = Math.random() * 4 + 1;
-            
-            // Update UI
-            document.getElementById('speed').value = config.speed;
-            document.getElementById('speed-value').textContent = config.speed.toFixed(1);
-            
-            document.getElementById('particle-count').value = config.particleCount;
-            document.getElementById('particle-count-value').textContent = config.particleCount;
-            
-            document.getElementById('noise-scale').value = config.noiseScale;
-            document.getElementById('noise-scale-value').textContent = config.noiseScale.toFixed(3);
-            
-            document.getElementById('color-intensity').value = config.colorIntensity;
-            document.getElementById('color-intensity-value').textContent = config.colorIntensity.toFixed(1);
-            
-            document.getElementById('particle-size').value = config.particleSize;
-            document.getElementById('particle-size-value').textContent = config.particleSize.toFixed(1);
-            
-            initAlgorithm();
-        });
-        
-        document.getElementById('screenshot-btn').addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'generative-art.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
-        
-        document.getElementById('fullscreen-btn').addEventListener('click', () => {
-            const container = document.getElementById('canvas-container');
-            if (container.requestFullscreen) {
-                container.requestFullscreen();
-            } else if (container.webkitRequestFullscreen) {
-                container.webkitRequestFullscreen();
-            } else if (container.msRequestFullscreen) {
-                container.msRequestFullscreen();
-            }
-        });
-        
-        // Preset buttons
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                colorPalette = btn.dataset.preset;
-                initAlgorithm();
-            });
-        });
-        
-        // Initialize and start animation
-        initAlgorithm();
-        animate();
-        
-        // Create floating particles for background effect
-        function createFloatingParticles() {
-            const container = document.querySelector('body');
-            const particleCount = 30;
-            
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement('div');
-                particle.classList.add('particle');
-                
-                // Random size and position
-                const size = Math.random() * 10 + 2;
-                const posX = Math.random() * 100;
-                const posY = Math.random() * 100;
-                
-                particle.style.width = `${size}px`;
-                particle.style.height = `${size}px`;
-                particle.style.left = `${posX}%`;
-                particle.style.top = `${posY}%`;
-                particle.style.opacity = Math.random() * 0.5 + 0.1;
-                particle.style.animationDuration = `${Math.random() * 10 + 10}s`;
-                particle.style.animationDelay = `${Math.random() * 5}s`;
-                
-                container.appendChild(particle);
-            }
-        }
-        
-        // Initialize floating particles
-        createFloatingParticles();
+
     </script>
 </body>
 </html>
