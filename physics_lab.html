@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Physics Laboratory | Newton's Three Laws of Motion</title>
+    <meta name="description" content="Interactive 3D Physics Simulation teaching Newton's Three Laws of Motion with real-time telemetry, vector visualization, and futuristic laboratory environment.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Three.js & OrbitControls from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #070a12;
+            --panel-bg: rgba(13, 20, 36, 0.75);
+            --panel-border: rgba(0, 243, 255, 0.25);
+            --primary-cyan: #00f3ff;
+            --primary-magenta: #ff0055;
+            --primary-amber: #ffaa00;
+            --accent-green: #00ff88;
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --font-main: 'Outfit', sans-serif;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            --neon-glow: 0 0 15px rgba(0, 243, 255, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            font-family: var(--font-main);
+            color: var(--text-main);
+        }
+
+        /* 3D Canvas Container */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* UI Overlay Wrapper */
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        /* Top Navigation Header */
+        header.top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.5rem;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--panel-border);
+            box-shadow: var(--glass-shadow);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary-cyan), var(--primary-magenta));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.2rem;
+            box-shadow: var(--neon-glow);
+        }
+
+        .brand-title {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #ffffff, var(--primary-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-badge {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            background: rgba(0, 243, 255, 0.15);
+            color: var(--primary-cyan);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        /* Nav Tabs */
+        .nav-tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.3rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            gap: 0.25rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: linear-gradient(135deg, rgba(0, 243, 255, 0.25), rgba(255, 0, 85, 0.25));
+            border: 1px solid var(--primary-cyan);
+            box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+        }
+
+        /* Nav Action Toolbar */
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            padding: 0.5rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .tool-btn:hover {
+            background: rgba(0, 243, 255, 0.15);
+            border-color: var(--primary-cyan);
+            color: var(--primary-cyan);
+        }
+
+        .tool-btn.active-toggle {
+            background: var(--primary-cyan);
+            color: #000;
+            border-color: var(--primary-cyan);
+            font-weight: 700;
+        }
+
+        /* Main Workspace Panels Layout */
+        .workspace-body {
+            display: flex;
+            justify-content: space-between;
+            padding: 1.25rem;
+            height: calc(100vh - 145px);
+            position: relative;
+        }
+
+        /* Glass Panel Common Styles */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            box-shadow: var(--glass-shadow);
+            padding: 1.25rem;
+            width: 340px;
+            max-height: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* Custom Scrollbar for Panels */
+        .glass-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .glass-panel::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .glass-panel::-webkit-scrollbar-thumb {
+            background: rgba(0, 243, 255, 0.3);
+            border-radius: 10px;
+        }
+        .glass-panel::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-cyan);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .panel-title i {
+            color: var(--primary-cyan);
+        }
+
+        /* Theory Content Styling */
+        .theory-badge {
+            display: inline-block;
+            background: rgba(255, 0, 85, 0.15);
+            border: 1px solid rgba(255, 0, 85, 0.4);
+            color: #ff5588;
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .theory-text {
+            font-size: 0.9rem;
+            line-height: 1.55;
+            color: var(--text-muted);
+        }
+
+        .formula-box {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 3px solid var(--primary-cyan);
+            padding: 0.75rem 1rem;
+            border-radius: 0 8px 8px 0;
+            font-family: var(--font-code);
+            font-size: 0.95rem;
+            color: var(--primary-cyan);
+            margin: 0.5rem 0;
+        }
+
+        .key-points {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .key-points li {
+            position: relative;
+            padding-left: 1.2rem;
+            color: var(--text-main);
+        }
+
+        .key-points li::before {
+            content: "❖";
+            position: absolute;
+            left: 0;
+            color: var(--primary-amber);
+            font-size: 0.75rem;
+        }
+
+        .example-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.4rem;
+        }
+
+        .pill {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Control Form Elements */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .control-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-value {
+            font-family: var(--font-code);
+            color: var(--primary-cyan);
+        }
+
+        /* Range Slider Styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-cyan);
+            box-shadow: 0 0 10px var(--primary-cyan);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Custom Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-cyan), #0099ff);
+            color: #000;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 243, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 243, 255, 0.5);
+            background: linear-gradient(135deg, #33f6ff, #1ab0ff);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.6rem 1rem;
+            border-radius: 10px;
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Button Grid / Selectors */
+        .cube-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .select-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .select-btn.active {
+            border-color: var(--primary-cyan);
+            color: var(--primary-cyan);
+            background: rgba(0, 243, 255, 0.12);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+
+        /* Friction Toggle Switch */
+        .switch-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.6rem 0.8rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .switch-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch:checked {
+            background: var(--primary-cyan);
+        }
+
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch:checked::before {
+            transform: translateX(20px);
+        }
+
+        /* Bottom Live Telemetry Strip */
+        footer.telemetry-strip {
+            padding: 0.6rem 1.5rem;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid var(--panel-border);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem;
+            align-items: center;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .telemetry-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 0.4rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .telemetry-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .telemetry-val {
+            font-family: var(--font-code);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--primary-cyan);
+            margin-top: 0.1rem;
+        }
+
+        /* 3D Floating Educational Hook Banner */
+        .edu-hook-banner {
+            position: absolute;
+            top: 1.25rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13, 20, 36, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--primary-cyan);
+            border-radius: 30px;
+            padding: 0.5rem 1.25rem;
+            font-family: var(--font-heading);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #fff;
+            box-shadow: var(--neon-glow);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            z-index: 15;
+            transition: all 0.3s ease;
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        .edu-hook-banner i {
+            color: var(--primary-amber);
+            font-size: 1rem;
+        }
+
+        /* Quiz Modal */
+        .quiz-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .quiz-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .quiz-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-cyan);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 520px;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .quiz-question {
+            font-family: var(--font-heading);
+            font-size: 1.15rem;
+            color: #fff;
+            line-height: 1.4;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .quiz-opt-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quiz-opt-btn:hover {
+            background: rgba(0, 243, 255, 0.15);
+            border-color: var(--primary-cyan);
+        }
+
+        .quiz-opt-btn.correct {
+            background: rgba(0, 255, 136, 0.2);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .quiz-opt-btn.wrong {
+            background: rgba(255, 0, 85, 0.2);
+            border-color: var(--primary-magenta);
+            color: var(--primary-magenta);
+        }
+
+        .quiz-feedback {
+            font-size: 0.9rem;
+            min-height: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
+            .glass-panel {
+                width: 290px;
+                padding: 1rem;
+            }
+            .brand-title { font-size: 1.1rem; }
+            .tab-btn { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+        }
+
+        @media (max-width: 768px) {
+            header.top-nav {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0.5rem 1rem;
+            }
+            .workspace-body {
+                flex-direction: column;
+                height: auto;
+                overflow-y: auto;
+                gap: 1rem;
+                pointer-events: auto;
+            }
+            .glass-panel {
+                width: 100%;
+                max-height: 300px;
+            }
+            .edu-hook-banner {
+                position: relative;
+                top: 0;
+                left: 0;
+                transform: none;
+                margin: 0.5rem 1rem;
+            }
+            footer.telemetry-strip {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Canvas Element Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div class="ui-overlay">
+
+        <!-- Top Navigation Header Bar -->
+        <header class="top-nav interactive">
+            <div class="brand">
+                <div class="brand-icon"><i class="fa-solid fa-atom"></i></div>
+                <div>
+                    <span class="brand-title">NEWTON 3D LAB</span>
+                </div>
+                <span class="brand-badge">Interactive 3D</span>
+            </div>
+
+            <!-- Law Selection Tabs -->
+            <nav class="nav-tabs">
+                <button class="tab-btn active" id="tab-law1" onclick="app.selectLaw(1)">
+                    <i class="fa-solid fa-circle-notch"></i> 1st Law: Inertia
+                </button>
+                <button class="tab-btn" id="tab-law2" onclick="app.selectLaw(2)">
+                    <i class="fa-solid fa-bolt"></i> 2nd Law: F = ma
+                </button>
+                <button class="tab-btn" id="tab-law3" onclick="app.selectLaw(3)">
+                    <i class="fa-solid fa-right-left"></i> 3rd Law: Action & Reaction
+                </button>
+            </nav>
+
+            <!-- Toolbar Buttons -->
+            <div class="nav-actions">
+                <button class="tool-btn" id="btn-reset-scene" onclick="app.resetActiveScene()">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+                <button class="tool-btn" id="btn-speed-toggle" onclick="app.toggleSpeed()">
+                    <i class="fa-solid fa-gauge-high"></i> <span id="speed-label">1.0x</span>
+                </button>
+                <button class="tool-btn" id="btn-audio-toggle" onclick="app.toggleAudio()">
+                    <i class="fa-solid fa-volume-high" id="audio-icon"></i> Audio
+                </button>
+                <button class="tool-btn" id="btn-quiz" onclick="app.openQuiz()">
+                    <i class="fa-solid fa-graduation-cap"></i> Quiz
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace Panels Area -->
+        <main class="workspace-body">
+
+            <!-- Educational Hook Banner Top Center -->
+            <div class="edu-hook-banner interactive" id="edu-banner">
+                <i class="fa-solid fa-lightbulb"></i>
+                <span id="edu-banner-text">An object in motion stays in motion unless acted upon by an external force.</span>
+            </div>
+
+            <!-- Left Floating Panel: Theory & Explanation -->
+            <section class="glass-panel interactive" id="left-theory-panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="fa-solid fa-book-open"></i> Theory & Principles</div>
+                    <span class="theory-badge" id="theory-law-code">LAW I</span>
+                </div>
+
+                <div id="theory-content">
+                    <!-- Dynamic HTML injected per active law -->
+                </div>
+            </section>
+
+            <!-- Right Floating Panel: Interactive Parameter Controls -->
+            <section class="glass-panel interactive" id="right-control-panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="fa-solid fa-sliders"></i> Parameters</div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Real-time</span>
+                </div>
+
+                <div id="control-content" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Dynamic Controls injected per active law -->
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Bottom Telemetry Live Readout Strip -->
+        <footer class="telemetry-strip interactive">
+            <div class="telemetry-card">
+                <span class="telemetry-label">VELOCITY (v)</span>
+                <span class="telemetry-val" id="telemetry-vel">0.00 m/s</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="telemetry-label">ACCELERATION (a)</span>
+                <span class="telemetry-val" id="telemetry-acc">0.00 m/s²</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="telemetry-label">APPLIED FORCE (F)</span>
+                <span class="telemetry-val" id="telemetry-force">0.00 N</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="telemetry-label">FRICTION FORCE (f)</span>
+                <span class="telemetry-val" id="telemetry-friction">0.00 N</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="telemetry-label">ACTIVE MASS (m)</span>
+                <span class="telemetry-val" id="telemetry-mass">2.00 kg</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="telemetry-label">MOMENTUM (p)</span>
+                <span class="telemetry-val" id="telemetry-momentum">0.00 kg·m/s</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="telemetry-label">KINETIC ENERGY</span>
+                <span class="telemetry-val" id="telemetry-energy">0.00 J</span>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Quiz Modal Overlay -->
+    <div class="quiz-modal-overlay" id="quiz-modal">
+        <div class="quiz-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: var(--font-heading); color: var(--primary-cyan);">Physics Self-Test Challenge</h3>
+                <button class="tool-btn" onclick="app.closeQuiz()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="quiz-question" id="quiz-q-text">Loading question...</p>
+            <div class="quiz-options" id="quiz-opts"></div>
+            <div class="quiz-feedback" id="quiz-feedback"></div>
+            <button class="btn-primary" id="btn-next-quiz" onclick="app.nextQuizQuestion()">Next Question <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- JAVASCRIPT LOGIC ARCHITECTURE                                             -->
+    <!-- ========================================================================= -->
+    <script>
+        /**
+         * Web Audio Synthesizer Class
+         * Creates crisp sci-fi sound effects without external file dependencies.
+         */
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            }
+
+            playPush() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playThruster() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                // Create noise buffer for plasma thruster roar
+                const bufferSize = this.ctx.sampleRate * 0.4;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(600, this.ctx.currentTime);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                noise.start();
+            }
+
+            playSpringRelease() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.25);
+
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playClick() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+        }
+
+        /**
+         * Laboratory Environment Setup Class
+         * Builds the sci-fi room, polished grid floor, studio lights, track, and grid ticks.
+         */
+        class LabEnvironment {
+            constructor(scene) {
+                this.scene = scene;
+                this.buildEnvironment();
+            }
+
+            buildEnvironment() {
+                // Dark Sci-Fi Fog
+                this.scene.fog = new THREE.FogExp2(0x070a12, 0.015);
+
+                // Polished Dark Grid Floor
+                const floorGeo = new THREE.PlaneGeometry(80, 80);
+                const floorMat = new THREE.MeshStandardMaterial({
+                    color: 0x070a14,
+                    roughness: 0.2,
+                    metalness: 0.8
+                });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -0.01;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+
+                // Glowing Grid Overlay
+                const gridHelper = new THREE.GridHelper(80, 40, 0x00f3ff, 0x1f293d);
+                gridHelper.position.y = 0.001;
+                this.scene.add(gridHelper);
+
+                // Main High-Tech Metallic Track Platform
+                const trackGeo = new THREE.BoxGeometry(40, 0.2, 4);
+                const trackMat = new THREE.MeshStandardMaterial({
+                    color: 0x151d2a,
+                    roughness: 0.3,
+                    metalness: 0.9
+                });
+                this.track = new THREE.Mesh(trackGeo, trackMat);
+                this.track.position.set(0, 0.1, 0);
+                this.track.receiveShadow = true;
+                this.track.castShadow = true;
+                this.scene.add(this.track);
+
+                // Track Glowing Neon Edge Rails
+                const railMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+                const railGeo = new THREE.BoxGeometry(40, 0.08, 0.08);
+
+                const railFront = new THREE.Mesh(railGeo, railMat);
+                railFront.position.set(0, 0.22, 1.95);
+                this.scene.add(railFront);
+
+                const railBack = new THREE.Mesh(railGeo, railMat);
+                railBack.position.set(0, 0.22, -1.95);
+                this.scene.add(railBack);
+
+                // Track Distance Markers (0m, 5m, 10m...)
+                this.createTrackDistanceMarkers();
+
+                // Studio Lighting Setup
+                this.setupLighting();
+            }
+
+            createTrackDistanceMarkers() {
+                const markerGeo = new THREE.BoxGeometry(0.1, 0.02, 3.8);
+                const markerMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+
+                for (let x = -18; x <= 18; x += 3) {
+                    const marker = new THREE.Mesh(markerGeo, markerMat);
+                    marker.position.set(x, 0.201, 0);
+                    this.scene.add(marker);
+                }
+            }
+
+            setupLighting() {
+                // Ambient Base Fill Light
+                const ambient = new THREE.AmbientLight(0x1a2638, 0.8);
+                this.scene.add(ambient);
+
+                // Main Studio Directional Light with Shadows
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+                dirLight.position.set(15, 25, 15);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                dirLight.shadow.camera.near = 0.5;
+                dirLight.shadow.camera.far = 60;
+                dirLight.shadow.camera.left = -25;
+                dirLight.shadow.camera.right = 25;
+                dirLight.shadow.camera.top = 25;
+                dirLight.shadow.camera.bottom = -25;
+                this.scene.add(dirLight);
+
+                // Cool Sci-Fi Blue Accent Point Light
+                const pointLight1 = new THREE.PointLight(0x00f3ff, 2.5, 30);
+                pointLight1.position.set(-15, 8, -10);
+                this.scene.add(pointLight1);
+
+                // Neon Magenta Accent Point Light
+                const pointLight2 = new THREE.PointLight(0xff0055, 2.5, 30);
+                pointLight2.position.set(15, 8, -10);
+                this.scene.add(pointLight2);
+            }
+        }
+
+        /**
+         * 3D Vector Arrow Visualizer Helper
+         * Renders dynamic arrows for Force, Acceleration, and Velocity.
+         */
+        class VectorArrowHelper {
+            constructor(scene, colorHex, name) {
+                this.scene = scene;
+                this.name = name;
+                const dir = new THREE.Vector3(1, 0, 0);
+                const origin = new THREE.Vector3(0, 0, 0);
+                this.arrow = new THREE.ArrowHelper(dir, origin, 1, colorHex, 0.4, 0.25);
+                this.arrow.visible = false;
+                this.scene.add(this.arrow);
+            }
+
+            update(origin, vector, scaleFactor = 1.0) {
+                const len = vector.length() * scaleFactor;
+                if (len < 0.05) {
+                    this.arrow.visible = false;
+                    return;
+                }
+                this.arrow.visible = true;
+                this.arrow.position.copy(origin);
+                const dir = vector.clone().normalize();
+                this.arrow.setDirection(dir);
+                this.arrow.setLength(Math.min(len, 8), Math.min(len * 0.3, 0.6), Math.min(len * 0.2, 0.4));
+            }
+
+            hide() {
+                this.arrow.visible = false;
+            }
+        }
+
+        /**
+         * Scene 1: Newton's First Law (Law of Inertia)
+         * Sphere on track with Friction ON/OFF toggle and Impulse push.
+         */
+        class Law1Simulation {
+            constructor(scene, soundManager) {
+                this.scene = scene;
+                this.soundManager = soundManager;
+                this.mass = 2.0; // kg
+                this.frictionOn = true;
+                this.frictionCoeff = 0.15; // mu
+                this.velocity = new THREE.Vector3(0, 0, 0);
+                this.position = new THREE.Vector3(-12, 1.0, 0); // initial pos
+                this.radius = 0.8;
+
+                // 3D Visual Mesh - Neon Metallic Sphere
+                const geo = new THREE.IcosahedronGeometry(this.radius, 4);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0x00f3ff,
+                    metalness: 0.9,
+                    roughness: 0.1,
+                    emissive: 0x003344,
+                    emissiveIntensity: 0.5
+                });
+                this.sphere = new THREE.Mesh(geo, mat);
+                this.sphere.castShadow = true;
+                this.sphere.receiveShadow = true;
+                this.scene.add(this.sphere);
+
+                // Vector Helper for Velocity
+                this.velArrow = new VectorArrowHelper(this.scene, 0x00f3ff, "Velocity");
+                this.frictionArrow = new VectorArrowHelper(this.scene, 0xff0055, "Friction");
+
+                this.reset();
+            }
+
+            reset() {
+                this.velocity.set(0, 0, 0);
+                this.position.set(-12, this.radius + 0.2, 0);
+                this.sphere.position.copy(this.position);
+                this.sphere.rotation.set(0, 0, 0);
+                this.velArrow.hide();
+                this.frictionArrow.hide();
+            }
+
+            applyImpulse(forceMagnitude) {
+                // Impulse I = F * dt gives instant velocity v = I / m
+                const impulseVel = forceMagnitude / this.mass;
+                this.velocity.x = impulseVel;
+                this.soundManager.playPush();
+            }
+
+            update(dt) {
+                if (Math.abs(this.velocity.x) > 0.001) {
+                    let frictionForce = 0;
+                    let accX = 0;
+
+                    if (this.frictionOn) {
+                        const g = 9.81;
+                        frictionForce = this.frictionCoeff * this.mass * g;
+                        accX = -Math.sign(this.velocity.x) * (frictionForce / this.mass);
+
+                        // Update velocity
+                        const newVelX = this.velocity.x + accX * dt;
+                        if (Math.sign(newVelX) !== Math.sign(this.velocity.x)) {
+                            this.velocity.x = 0; // stop cleanly
+                        } else {
+                            this.velocity.x = newVelX;
+                        }
+
+                        // Show friction vector
+                        const fVec = new THREE.Vector3(-Math.sign(this.velocity.x) * frictionForce, 0, 0);
+                        this.frictionArrow.update(this.position.clone().add(new THREE.Vector3(0, 0.9, 0)), fVec, 0.3);
+                    } else {
+                        // Friction OFF -> v = constant (Newton's 1st Law)
+                        this.frictionArrow.hide();
+                    }
+
+                    // Update Position
+                    this.position.x += this.velocity.x * dt;
+
+                    // Track Bounds Wrapping for continuous demonstration
+                    if (this.position.x > 16) {
+                        this.position.x = -16;
+                    }
+
+                    // Rotate sphere visually according to angular velocity v = w * r
+                    const angularVel = this.velocity.x / this.radius;
+                    this.sphere.rotation.z -= angularVel * dt;
+
+                    // Update Velocity Arrow
+                    this.velArrow.update(this.position.clone().add(new THREE.Vector3(0, 1.1, 0)), this.velocity, 0.4);
+                } else {
+                    this.velArrow.hide();
+                    this.frictionArrow.hide();
+                }
+
+                this.sphere.position.copy(this.position);
+            }
+
+            getTelemetry() {
+                const g = 9.81;
+                const fVal = this.frictionOn && Math.abs(this.velocity.x) > 0.001 ? (this.frictionCoeff * this.mass * g) : 0;
+                const accVal = this.frictionOn && Math.abs(this.velocity.x) > 0.001 ? (fVal / this.mass) : 0;
+                const vVal = Math.abs(this.velocity.x);
+                const pVal = this.mass * vVal;
+                const ekVal = 0.5 * this.mass * vVal * vVal;
+
+                return {
+                    vel: vVal.toFixed(2) + " m/s",
+                    acc: accVal.toFixed(2) + " m/s²",
+                    appliedForce: "0.00 N",
+                    frictionForce: fVal.toFixed(2) + " N",
+                    mass: this.mass.toFixed(2) + " kg",
+                    momentum: pVal.toFixed(2) + " kg·m/s",
+                    energy: ekVal.toFixed(2) + " J"
+                };
+            }
+
+            destroy() {
+                this.scene.remove(this.sphere);
+                this.velArrow.hide();
+                this.frictionArrow.hide();
+            }
+        }
+
+        /**
+         * Scene 2: Newton's Second Law (F = ma)
+         * Three distinct cubes with mechanical thruster arm applying force.
+         */
+        class Law2Simulation {
+            constructor(scene, soundManager) {
+                this.scene = scene;
+                this.soundManager = soundManager;
+
+                // Cube Data Config (Small Red 1kg, Medium Yellow 5kg, Large Blue 10kg)
+                this.cubesData = [
+                    { id: 'small', name: 'Small Cube', mass: 1.0, size: 0.8, color: 0xff3366 },
+                    { id: 'medium', name: 'Medium Cube', mass: 5.0, size: 1.2, color: 0xffcc00 },
+                    { id: 'large', name: 'Large Cube', mass: 10.0, size: 1.6, color: 0x00a8ff }
+                ];
+
+                this.selectedIndex = 0; // Default small red
+                this.appliedForce = 20.0; // N
+                this.activeCubes = [];
+                this.velocities = [0, 0, 0];
+                this.positions = [-12, -12, -12];
+                this.isFiring = false;
+                this.fireTimer = 0;
+
+                // Build 3D Cubes
+                this.createCubes();
+
+                // Vector Arrows for selected cube
+                this.forceArrow = new VectorArrowHelper(this.scene, 0xff0055, "Force");
+                this.accArrow = new VectorArrowHelper(this.scene, 0x00ff88, "Acceleration");
+                this.velArrow = new VectorArrowHelper(this.scene, 0x00f3ff, "Velocity");
+
+                // Thruster Plasma Mesh
+                this.createThruster();
+
+                this.reset();
+            }
+
+            createCubes() {
+                this.cubesData.forEach((data, index) => {
+                    const geo = new THREE.BoxGeometry(data.size, data.size, data.size);
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: data.color,
+                        roughness: 0.2,
+                        metalness: 0.8
+                    });
+                    const cube = new THREE.Mesh(geo, mat);
+                    cube.castShadow = true;
+                    cube.receiveShadow = true;
+                    this.scene.add(cube);
+                    this.activeCubes.push(cube);
+                });
+            }
+
+            createThruster() {
+                const geo = new THREE.ConeGeometry(0.3, 1.2, 16);
+                const mat = new THREE.MeshBasicMaterial({
+                    color: 0xffaa00,
+                    wireframe: true
+                });
+                this.thrusterCone = new THREE.Mesh(geo, mat);
+                this.thrusterCone.rotation.z = -Math.PI / 2;
+                this.thrusterCone.visible = false;
+                this.scene.add(this.thrusterCone);
+            }
+
+            reset() {
+                const zOffsets = [-1.0, 0, 1.0];
+                this.cubesData.forEach((data, i) => {
+                    this.positions[i] = -14;
+                    this.velocities[i] = 0;
+                    this.activeCubes[i].position.set(-14, data.size / 2 + 0.2, zOffsets[i]);
+                });
+                this.isFiring = false;
+                this.thrusterCone.visible = false;
+                this.hideArrows();
+            }
+
+            selectCube(index) {
+                this.selectedIndex = index;
+            }
+
+            fireThruster() {
+                this.isFiring = true;
+                this.fireTimer = 1.5; // Fire force for 1.5s
+                this.soundManager.playThruster();
+            }
+
+            hideArrows() {
+                this.forceArrow.hide();
+                this.accArrow.hide();
+                this.velArrow.hide();
+            }
+
+            update(dt) {
+                const activeData = this.cubesData[this.selectedIndex];
+                const activeCube = this.activeCubes[this.selectedIndex];
+
+                let currentAcc = 0;
+                let currentForce = 0;
+
+                if (this.isFiring && this.fireTimer > 0) {
+                    this.fireTimer -= dt;
+                    currentForce = this.appliedForce;
+                    // Newton's 2nd Law Formula: a = F / m
+                    currentAcc = currentForce / activeData.mass;
+
+                    // Update velocity for selected cube
+                    this.velocities[this.selectedIndex] += currentAcc * dt;
+
+                    // Position thruster flame behind the cube
+                    this.thrusterCone.visible = true;
+                    this.thrusterCone.position.copy(activeCube.position);
+                    this.thrusterCone.position.x -= (activeData.size / 2 + 0.6);
+
+                    if (this.fireTimer <= 0) {
+                        this.isFiring = false;
+                        this.thrusterCone.visible = false;
+                    }
+                } else {
+                    this.thrusterCone.visible = false;
+                }
+
+                // Update positions for all cubes moving with their velocities
+                this.activeCubes.forEach((cube, i) => {
+                    if (this.velocities[i] > 0) {
+                        this.positions[i] += this.velocities[i] * dt;
+                        if (this.positions[i] > 16) this.positions[i] = -16;
+                        cube.position.x = this.positions[i];
+                    }
+                });
+
+                // Update 3D Vector Arrows over selected cube
+                const posAbove = activeCube.position.clone().add(new THREE.Vector3(0, activeData.size / 2 + 0.6, 0));
+                
+                if (currentForce > 0) {
+                    this.forceArrow.update(posAbove, new THREE.Vector3(currentForce, 0, 0), 0.1);
+                    this.accArrow.update(posAbove.clone().add(new THREE.Vector3(0, 0.5, 0)), new THREE.Vector3(currentAcc, 0, 0), 0.2);
+                } else {
+                    this.forceArrow.hide();
+                    this.accArrow.hide();
+                }
+
+                if (this.velocities[this.selectedIndex] > 0) {
+                    this.velArrow.update(posAbove.clone().add(new THREE.Vector3(0, 1.0, 0)), new THREE.Vector3(this.velocities[this.selectedIndex], 0, 0), 0.3);
+                } else {
+                    this.velArrow.hide();
+                }
+            }
+
+            getTelemetry() {
+                const activeData = this.cubesData[this.selectedIndex];
+                const v = this.velocities[this.selectedIndex];
+                const f = this.isFiring ? this.appliedForce : 0;
+                const a = f / activeData.mass;
+                const p = activeData.mass * v;
+                const ek = 0.5 * activeData.mass * v * v;
+
+                return {
+                    vel: v.toFixed(2) + " m/s",
+                    acc: a.toFixed(2) + " m/s²",
+                    appliedForce: f.toFixed(2) + " N",
+                    frictionForce: "0.00 N",
+                    mass: activeData.mass.toFixed(2) + " kg",
+                    momentum: p.toFixed(2) + " kg·m/s",
+                    energy: ek.toFixed(2) + " J"
+                };
+            }
+
+            destroy() {
+                this.activeCubes.forEach(cube => this.scene.remove(cube));
+                this.scene.remove(this.thrusterCone);
+                this.hideArrows();
+            }
+        }
+
+        /**
+         * Scene 3: Newton's Third Law (Action & Reaction)
+         * Two spring-loaded carts pushing off each other with equal & opposite forces.
+         */
+        class Law3Simulation {
+            constructor(scene, soundManager) {
+                this.scene = scene;
+                this.soundManager = soundManager;
+                this.massA = 2.0; // kg Cart A
+                this.massB = 4.0; // kg Cart B
+                this.springK = 200.0; // N/m spring stiffness
+                this.springCompress = 0.8; // compression meters
+
+                this.velA = 0;
+                this.velB = 0;
+                this.posA = -1.0;
+                this.posB = 1.0;
+                this.isReleased = false;
+
+                // Create Carts and Spring Mesh
+                this.createCartsAndSpring();
+
+                // Dual Opposing Vector Arrows
+                this.arrowA = new VectorArrowHelper(this.scene, 0xff0055, "Force A");
+                this.arrowB = new VectorArrowHelper(this.scene, 0x00ff88, "Force B");
+
+                this.reset();
+            }
+
+            createCartsAndSpring() {
+                // Cart A (Violet Mesh)
+                const geoA = new THREE.BoxGeometry(1.6, 0.6, 1.2);
+                const matA = new THREE.MeshStandardMaterial({ color: 0x9d4edd, metalness: 0.8, roughness: 0.2 });
+                this.cartA = new THREE.Mesh(geoA, matA);
+                this.cartA.castShadow = true;
+                this.scene.add(this.cartA);
+
+                // Cart B (Cyan Mesh)
+                const geoB = new THREE.BoxGeometry(1.6, 0.6, 1.2);
+                const matB = new THREE.MeshStandardMaterial({ color: 0x00f3ff, metalness: 0.8, roughness: 0.2 });
+                this.cartB = new THREE.Mesh(geoB, matB);
+                this.cartB.castShadow = true;
+                this.scene.add(this.cartB);
+
+                // Coiled Spring Mesh
+                const springGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.5, 12);
+                const springMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, wireframe: true });
+                this.spring = new THREE.Mesh(springGeo, springMat);
+                this.spring.rotation.z = Math.PI / 2;
+                this.scene.add(this.spring);
+            }
+
+            reset() {
+                this.velA = 0;
+                this.velB = 0;
+                this.posA = -0.8;
+                this.posB = 0.8;
+                this.isReleased = false;
+                this.updateMeshPositions();
+                this.arrowA.hide();
+                this.arrowB.hide();
+            }
+
+            releaseSpring() {
+                if (this.isReleased) return;
+                this.isReleased = true;
+
+                // Potential Energy stored in spring Ep = 0.5 * k * x^2
+                const Ep = 0.5 * this.springK * this.springCompress * this.springCompress;
+
+                // Newton's 3rd Law & Conservation of Momentum:
+                // m_A * v_A + m_B * v_B = 0  =>  v_B = - (m_A / m_B) * v_A
+                // Ep = 0.5 * m_A * v_A^2 + 0.5 * m_B * v_B^2
+                const vA_mag = Math.sqrt((2 * Ep) / (this.massA * (1 + this.massA / this.massB)));
+                this.velA = -vA_mag; // Cart A pushes Left
+                this.velB = (this.massA / this.massB) * vA_mag; // Cart B pushes Right
+
+                this.soundManager.playSpringRelease();
+            }
+
+            update(dt) {
+                if (this.isReleased) {
+                    this.posA += this.velA * dt;
+                    this.posB += this.velB * dt;
+
+                    // Show opposing action-reaction force vectors during launch
+                    if (Math.abs(this.posA - this.posB) < 6.0) {
+                        const midX = (this.posA + this.posB) / 2;
+                        const forceMag = this.springK * this.springCompress;
+
+                        this.arrowA.update(new THREE.Vector3(midX, 1.2, 0), new THREE.Vector3(-forceMag, 0, 0), 0.05);
+                        this.arrowB.update(new THREE.Vector3(midX, 1.2, 0), new THREE.Vector3(forceMag, 0, 0), 0.05);
+                    } else {
+                        this.arrowA.hide();
+                        this.arrowB.hide();
+                    }
+                }
+
+                this.updateMeshPositions();
+            }
+
+            updateMeshPositions() {
+                this.cartA.position.set(this.posA, 0.5, 0);
+                this.cartB.position.set(this.posB, 0.5, 0);
+
+                // Update spring mesh scaling between carts
+                const dist = Math.abs(this.posB - this.posA) - 1.6;
+                this.spring.position.set((this.posA + this.posB) / 2, 0.5, 0);
+                this.spring.scale.set(1, Math.max(dist / 1.5, 0.1), 1);
+            }
+
+            getTelemetry() {
+                const pA = this.massA * Math.abs(this.velA);
+                const ekA = 0.5 * this.massA * this.velA * this.velA;
+
+                return {
+                    vel: `A:${Math.abs(this.velA).toFixed(2)} | B:${Math.abs(this.velB).toFixed(2)} m/s`,
+                    acc: "0.00 m/s²",
+                    appliedForce: (this.isReleased ? (this.springK * this.springCompress).toFixed(1) : "0.00") + " N",
+                    frictionForce: "0.00 N",
+                    mass: `A:${this.massA}kg | B:${this.massB}kg`,
+                    momentum: pA.toFixed(2) + " kg·m/s",
+                    energy: ekA.toFixed(2) + " J"
+                };
+            }
+
+            destroy() {
+                this.scene.remove(this.cartA);
+                this.scene.remove(this.cartB);
+                this.scene.remove(this.spring);
+                this.arrowA.hide();
+                this.arrowB.hide();
+            }
+        }
+
+        /**
+         * Main Application & Scene Manager Class
+         * Coordinates rendering, camera controls, tab switching, and UI sync.
+         */
+        class PhysicsLabApp {
+            constructor() {
+                this.activeLaw = 1;
+                this.simSpeed = 1.0;
+
+                // Web Audio Synthesizer
+                this.soundManager = new SoundManager();
+
+                // Quiz Questions Dataset
+                this.quizQuestions = [
+                    {
+                        q: "According to Newton's First Law, what happens to a moving sphere in deep space with zero friction?",
+                        opts: ["It gradually slows down to a stop.", "It continues moving at a constant velocity forever.", "It accelerates automatically.", "It changes direction continuously."],
+                        correct: 1,
+                        exp: "In the absence of external forces like friction, an object in motion maintains its constant velocity indefinitely!"
+                    },
+                    {
+                        q: "If you double the Applied Force (F) on a fixed mass, what happens to its Acceleration (a)?",
+                        opts: ["Acceleration is halved.", "Acceleration remains unchanged.", "Acceleration doubles.", "Acceleration quadruples."],
+                        correct: 2,
+                        exp: "From F = ma, acceleration is directly proportional to applied force (a = F/m)."
+                    },
+                    {
+                        q: "When a heavy truck hits a small car, how do the forces exerted on each other compare?",
+                        opts: ["The truck exerts a larger force on the car.", "The car exerts a larger force on the truck.", "The forces are equal in magnitude and opposite in direction.", "No force is exerted."],
+                        correct: 2,
+                        exp: "Newton's Third Law dictates that action and reaction forces are always equal in magnitude and opposite in direction, regardless of mass difference!"
+                    }
+                ];
+                this.currentQuizIdx = 0;
+
+                this.initThreeJS();
+                this.initEnvironment();
+                this.selectLaw(1);
+                this.setupResizeHandler();
+                this.animate();
+            }
+
+            initThreeJS() {
+                const container = document.getElementById('canvas-container');
+
+                // Scene
+                this.scene = new THREE.Scene();
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+                this.camera.position.set(0, 12, 22);
+
+                // WebGL Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(this.renderer.domElement);
+
+                // OrbitControls with Polar Angle Clamp (cannot go below floor)
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.05; // Prevent clipping floor
+                this.controls.minDistance = 5;
+                this.controls.maxDistance = 45;
+                this.controls.target.set(0, 1, 0);
+            }
+
+            initEnvironment() {
+                this.labEnv = new LabEnvironment(this.scene);
+                this.clock = new THREE.Clock();
+            }
+
+            selectLaw(lawNum) {
+                this.activeLaw = lawNum;
+                this.soundManager.playClick();
+
+                // Destroy current active simulation
+                if (this.currentSim) {
+                    this.currentSim.destroy();
+                }
+
+                // Update UI Navigation Tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`tab-law${lawNum}`).classList.add('active');
+
+                // Instantiate new simulation
+                if (lawNum === 1) {
+                    this.currentSim = new Law1Simulation(this.scene, this.soundManager);
+                } else if (lawNum === 2) {
+                    this.currentSim = new Law2Simulation(this.scene, this.soundManager);
+                } else if (lawNum === 3) {
+                    this.currentSim = new Law3Simulation(this.scene, this.soundManager);
+                }
+
+                // Update UI Panels and Educational Banner
+                this.renderTheoryPanel(lawNum);
+                this.renderControlPanel(lawNum);
+                this.updateEduBanner(lawNum);
+            }
+
+            updateEduBanner(lawNum) {
+                const bannerText = document.getElementById('edu-banner-text');
+                if (lawNum === 1) {
+                    bannerText.textContent = "1st Law (Inertia): An object remains in motion or at rest unless acted upon by a net external force.";
+                } else if (lawNum === 2) {
+                    bannerText.textContent = "2nd Law (F = ma): Acceleration is directly proportional to Force and inversely proportional to Mass.";
+                } else if (lawNum === 3) {
+                    bannerText.textContent = "3rd Law (Action & Reaction): For every action, there is an equal and opposite reaction (F12 = -F21).";
+                }
+            }
+
+            renderTheoryPanel(lawNum) {
+                const codeBadge = document.getElementById('theory-law-code');
+                const contentDiv = document.getElementById('theory-content');
+
+                if (lawNum === 1) {
+                    codeBadge.textContent = "NEWTON'S 1ST LAW";
+                    contentDiv.innerHTML = `
+                        <p class="theory-text">The <strong>Law of Inertia</strong> states that a body remains at rest or continues in uniform motion along a straight line unless compelled to change by an external force.</p>
+                        <div class="formula-box">ΣF = 0 ⟹ v = constant, a = 0</div>
+                        <ul class="key-points">
+                            <li>Inertia is the resistance of any physical object to any change in its velocity.</li>
+                            <li>When friction is turned <strong>OFF</strong>, no net force opposes movement, so velocity stays constant.</li>
+                        </ul>
+                        <div style="margin-top: 0.75rem;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Real-World Applications:</span>
+                            <div class="example-pills">
+                                <span class="pill">🚀 Spacecraft Inertial Drift</span>
+                                <span class="pill">🚗 Seatbelt Safety</span>
+                                <span class="pill">⛸️ Ice Skating</span>
+                            </div>
+                        </div>
+                    `;
+                } else if (lawNum === 2) {
+                    codeBadge.textContent = "NEWTON'S 2ND LAW";
+                    contentDiv.innerHTML = `
+                        <p class="theory-text">The <strong>Fundamental Law of Dynamics</strong> relates force, mass, and acceleration. The acceleration of an object is directly proportional to net force and inversely proportional to mass.</p>
+                        <div class="formula-box">F = m · a  ⟹  a = F / m</div>
+                        <ul class="key-points">
+                            <li>A larger force produces a larger acceleration.</li>
+                            <li>A heavier mass requires a larger force to achieve the same acceleration.</li>
+                        </ul>
+                        <div style="margin-top: 0.75rem;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Real-World Applications:</span>
+                            <div class="example-pills">
+                                <span class="pill">🏎️ Formula 1 Rocket Launch</span>
+                                <span class="pill">✈️ Jet Engine Thrust</span>
+                                <span class="pill">🏋️ Weightlifting Mechanics</span>
+                            </div>
+                        </div>
+                    `;
+                } else if (lawNum === 3) {
+                    codeBadge.textContent = "NEWTON'S 3RD LAW";
+                    contentDiv.innerHTML = `
+                        <p class="theory-text">The <strong>Law of Action and Reaction</strong> dictates that forces always occur in pairs. Body A exerts a force on Body B, and Body B simultaneously exerts an equal and opposite force on Body A.</p>
+                        <div class="formula-box">F_A→B = - F_B→A</div>
+                        <ul class="key-points">
+                            <li>Forces are equal in magnitude, opposite in direction.</li>
+                            <li>Total momentum of an isolated system is conserved (mA · vA = - mB · vB).</li>
+                        </ul>
+                        <div style="margin-top: 0.75rem;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Real-World Applications:</span>
+                            <div class="example-pills">
+                                <span class="pill">🚀 Rocket Plasma Exhaust</span>
+                                <span class="pill">🔫 Rifle Recoil</span>
+                                <span class="pill">🏊 Swimming Push-off</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            renderControlPanel(lawNum) {
+                const container = document.getElementById('control-content');
+
+                if (lawNum === 1) {
+                    container.innerHTML = `
+                        <div class="switch-group">
+                            <span class="switch-label">Surface Friction</span>
+                            <input type="checkbox" class="toggle-switch" id="chk-friction" checked onchange="app.toggleFriction(this.checked)">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Friction Coefficient (μ)</span>
+                                <span class="control-value" id="val-mu">0.15</span>
+                            </div>
+                            <input type="range" min="0.01" max="0.50" step="0.01" value="0.15" oninput="app.updateFrictionCoeff(this.value)">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Impulse Push Force</span>
+                                <span class="control-value" id="val-impulse">15 N</span>
+                            </div>
+                            <input type="range" id="input-impulse" min="5" max="40" step="1" value="15" oninput="document.getElementById('val-impulse').textContent = this.value + ' N'">
+                        </div>
+
+                        <button class="btn-primary" onclick="app.pushLaw1Sphere()">
+                            <i class="fa-solid fa-hand-pointer"></i> Push Sphere (Apply Impulse)
+                        </button>
+                    `;
+                } else if (lawNum === 2) {
+                    container.innerHTML = `
+                        <div class="control-group">
+                            <span class="control-label">Select Object / Mass</span>
+                            <div class="cube-selector">
+                                <button class="select-btn active" id="cube-btn-0" onclick="app.selectCube(0)">Small (1kg)</button>
+                                <button class="select-btn" id="cube-btn-1" onclick="app.selectCube(1)">Med (5kg)</button>
+                                <button class="select-btn" id="cube-btn-2" onclick="app.selectCube(2)">Large (10kg)</button>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Applied Thruster Force (F)</span>
+                                <span class="control-value" id="val-force">30 N</span>
+                            </div>
+                            <input type="range" min="5" max="80" step="1" value="30" oninput="app.updateAppliedForce(this.value)">
+                        </div>
+
+                        <button class="btn-primary" onclick="app.fireThruster()">
+                            <i class="fa-solid fa-rocket"></i> Fire Mechanical Thruster
+                        </button>
+                    `;
+                } else if (lawNum === 3) {
+                    container.innerHTML = `
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Mass of Cart A (Left)</span>
+                                <span class="control-value" id="val-massA">2.0 kg</span>
+                            </div>
+                            <input type="range" min="1.0" max="10.0" step="0.5" value="2.0" oninput="app.updateMassA(this.value)">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Mass of Cart B (Right)</span>
+                                <span class="control-value" id="val-massB">4.0 kg</span>
+                            </div>
+                            <input type="range" min="1.0" max="10.0" step="0.5" value="4.0" oninput="app.updateMassB(this.value)">
+                        </div>
+
+                        <button class="btn-primary" onclick="app.releaseSpring()">
+                            <i class="fa-solid fa-compress-arrows-alt"></i> Release Compressed Spring
+                        </button>
+                    `;
+                }
+            }
+
+            // Law 1 Controls Handlers
+            toggleFriction(enabled) {
+                if (this.activeLaw === 1) {
+                    this.currentSim.frictionOn = enabled;
+                }
+            }
+
+            updateFrictionCoeff(val) {
+                document.getElementById('val-mu').textContent = val;
+                if (this.activeLaw === 1) {
+                    this.currentSim.frictionCoeff = parseFloat(val);
+                }
+            }
+
+            pushLaw1Sphere() {
+                if (this.activeLaw === 1) {
+                    const fVal = parseFloat(document.getElementById('input-impulse').value);
+                    this.currentSim.applyImpulse(fVal);
+                }
+            }
+
+            // Law 2 Controls Handlers
+            selectCube(index) {
+                if (this.activeLaw === 2) {
+                    document.querySelectorAll('.select-btn').forEach((btn, i) => {
+                        btn.classList.toggle('active', i === index);
+                    });
+                    this.currentSim.selectCube(index);
+                }
+            }
+
+            updateAppliedForce(val) {
+                document.getElementById('val-force').textContent = val + ' N';
+                if (this.activeLaw === 2) {
+                    this.currentSim.appliedForce = parseFloat(val);
+                }
+            }
+
+            fireThruster() {
+                if (this.activeLaw === 2) {
+                    this.currentSim.fireThruster();
+                }
+            }
+
+            // Law 3 Controls Handlers
+            updateMassA(val) {
+                document.getElementById('val-massA').textContent = val + ' kg';
+                if (this.activeLaw === 3) {
+                    this.currentSim.massA = parseFloat(val);
+                }
+            }
+
+            updateMassB(val) {
+                document.getElementById('val-massB').textContent = val + ' kg';
+                if (this.activeLaw === 3) {
+                    this.currentSim.massB = parseFloat(val);
+                }
+            }
+
+            releaseSpring() {
+                if (this.activeLaw === 3) {
+                    this.currentSim.releaseSpring();
+                }
+            }
+
+            // General Toolbar Actions
+            resetActiveScene() {
+                this.soundManager.playClick();
+                if (this.currentSim) {
+                    this.currentSim.reset();
+                }
+            }
+
+            toggleSpeed() {
+                if (this.simSpeed === 1.0) this.simSpeed = 0.5;
+                else if (this.simSpeed === 0.5) this.simSpeed = 2.0;
+                else this.simSpeed = 1.0;
+
+                document.getElementById('speed-label').textContent = this.simSpeed.toFixed(1) + 'x';
+            }
+
+            toggleAudio() {
+                this.soundManager.enabled = !this.soundManager.enabled;
+                const icon = document.getElementById('audio-icon');
+                icon.className = this.soundManager.enabled ? "fa-solid fa-volume-high" : "fa-solid fa-volume-xmark";
+            }
+
+            // Quiz Modal Logic
+            openQuiz() {
+                this.currentQuizIdx = 0;
+                this.renderQuizQuestion();
+                document.getElementById('quiz-modal').classList.add('active');
+            }
+
+            closeQuiz() {
+                document.getElementById('quiz-modal').classList.remove('active');
+            }
+
+            renderQuizQuestion() {
+                const q = this.quizQuestions[this.currentQuizIdx];
+                document.getElementById('quiz-q-text').textContent = `Q${this.currentQuizIdx + 1}: ${q.q}`;
+                document.getElementById('quiz-feedback').textContent = '';
+
+                const optsContainer = document.getElementById('quiz-opts');
+                optsContainer.innerHTML = '';
+
+                q.opts.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'quiz-opt-btn';
+                    btn.textContent = opt;
+                    btn.onclick = () => this.checkQuizAnswer(idx, btn);
+                    optsContainer.appendChild(btn);
+                });
+            }
+
+            checkQuizAnswer(selectedIdx, btnElement) {
+                const q = this.quizQuestions[this.currentQuizIdx];
+                const feedback = document.getElementById('quiz-feedback');
+
+                document.querySelectorAll('.quiz-opt-btn').forEach(b => b.onclick = null);
+
+                if (selectedIdx === q.correct) {
+                    btnElement.classList.add('correct');
+                    feedback.style.color = 'var(--accent-green)';
+                    feedback.textContent = '✓ Correct! ' + q.exp;
+                    this.soundManager.playPush();
+                } else {
+                    btnElement.classList.add('wrong');
+                    feedback.style.color = 'var(--primary-magenta)';
+                    feedback.textContent = '✗ Incorrect. ' + q.exp;
+                }
+            }
+
+            nextQuizQuestion() {
+                this.currentQuizIdx = (this.currentQuizIdx + 1) % this.quizQuestions.length;
+                this.renderQuizQuestion();
+            }
+
+            // Window Resize Handler
+            setupResizeHandler() {
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            // Main Animation Loop
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                const dt = this.clock.getDelta() * this.simSpeed;
+
+                // Update OrbitControls
+                this.controls.update();
+
+                // Update Active Simulation Physics
+                if (this.currentSim) {
+                    this.currentSim.update(dt);
+                    this.updateTelemetryHUD(this.currentSim.getTelemetry());
+                }
+
+                // Render 3D Scene
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            updateTelemetryHUD(data) {
+                document.getElementById('telemetry-vel').textContent = data.vel;
+                document.getElementById('telemetry-acc').textContent = data.acc;
+                document.getElementById('telemetry-force').textContent = data.appliedForce;
+                document.getElementById('telemetry-friction').textContent = data.frictionForce;
+                document.getElementById('telemetry-mass').textContent = data.mass;
+                document.getElementById('telemetry-momentum').textContent = data.momentum;
+                document.getElementById('telemetry-energy').textContent = data.energy;
+            }
+        }
+
+        // Initialize App on DOM Loaded
+        let app;
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new PhysicsLabApp();
+        });
+    </script>
+</body>
+</html>

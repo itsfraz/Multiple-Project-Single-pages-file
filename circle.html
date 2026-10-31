@@ -267,6 +267,58 @@
             font-weight: 600;
         }
 
+        .feedback-details {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .feedback-grade {
+            display: inline-block;
+            padding: 4px 18px;
+            border-radius: 999px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            animation: gradePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes gradePop {
+            0% { transform: scale(0.3); opacity: 0; }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .toast-notify {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(50px);
+            background: rgba(15, 23, 42, 0.9);
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast-notify.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
         /* Controls */
         .game-controls {
             display: flex;
@@ -529,6 +581,9 @@
             <p>Draw the perfect circle</p>
         </div>
         <div class="header-controls">
+            <button class="icon-btn" id="soundBtn" aria-label="Toggle Sound Effects">
+                <i class="fas fa-volume-up"></i>
+            </button>
             <button class="icon-btn" id="themeBtn" aria-label="Toggle Dark Mode">
                 <i class="fas fa-moon"></i>
             </button>
@@ -561,8 +616,10 @@
             <canvas id="gameCanvas"></canvas>
             
             <div class="feedback-overlay" id="feedbackOverlay">
+                <div class="feedback-grade" id="feedbackGrade">S+</div>
                 <div class="feedback-score" id="feedbackScore">98.5%</div>
                 <div class="feedback-text" id="feedbackText">Masterpiece!</div>
+                <div class="feedback-details" id="feedbackDetails"></div>
             </div>
 
             <div class="tooltip" id="startTooltip">Click & Hold to Draw</div>
@@ -577,6 +634,9 @@
         <button class="btn btn-secondary" id="undoBtn">
             <i class="fas fa-undo"></i> <span>Retry</span>
         </button>
+        <button class="btn btn-primary" id="shareBtn">
+            <i class="fas fa-camera"></i> <span>Save Card</span>
+        </button>
     </div>
 
     <!-- Settings Panel -->
@@ -584,6 +644,17 @@
         <div class="panel-header">
             <span class="panel-title">Settings</span>
             <button class="close-btn" id="closeSettingsBtn"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Game Mode</div>
+                <div class="setting-desc">Freehand or Target Bullseye</div>
+            </div>
+            <div class="segmented-control" id="modeControl">
+                <button class="segment-btn active" data-mode="freehand">Freehand</button>
+                <button class="segment-btn" data-mode="target">Target</button>
+            </div>
         </div>
 
         <div class="setting-item">
@@ -596,6 +667,28 @@
                 <button class="segment-btn active" data-diff="medium">Med</button>
                 <button class="segment-btn" data-diff="hard">Hard</button>
             </div>
+        </div>
+
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Precision Heatmap</div>
+                <div class="setting-desc">Color stroke segments by error</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="heatmapToggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Sound Effects</div>
+                <div class="setting-desc">Pencil drawing & score fanfares</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="soundToggle" checked>
+                <span class="slider"></span>
+            </label>
         </div>
 
         <div class="setting-item">
@@ -631,10 +724,154 @@
             Reset All Data
         </button>
     </div>
+    <div class="toast-notify" id="toastNotify">
+        <i class="fas fa-check-circle"></i> <span id="toastMsg">Scorecard saved!</span>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script>
+    /**
+     * Web Audio Procedural Sound Synthesizer (Zero external dependencies)
+     */
+    class SoundFX {
+        constructor() {
+            this.ctx = null;
+            this.enabled = localStorage.getItem('circleSound') !== 'false';
+            this.drawOsc = null;
+            this.drawGain = null;
+        }
+
+        init() {
+            if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        }
+
+        startDrawing() {
+            if (!this.enabled) return;
+            this.init();
+            if (!this.ctx) return;
+            try {
+                this.drawOsc = this.ctx.createOscillator();
+                const filter = this.ctx.createBiquadFilter();
+                this.drawGain = this.ctx.createGain();
+
+                this.drawOsc.type = 'triangle';
+                this.drawOsc.frequency.setValueAtTime(140, this.ctx.currentTime);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(450, this.ctx.currentTime);
+
+                this.drawGain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+                this.drawGain.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 0.05);
+
+                this.drawOsc.connect(filter);
+                filter.connect(this.drawGain);
+                this.drawGain.connect(this.ctx.destination);
+                this.drawOsc.start();
+            } catch (e) {}
+        }
+
+        updateDrawing(speed) {
+            if (!this.drawOsc || !this.ctx || !this.enabled) return;
+            try {
+                const targetFreq = Math.min(280, 130 + speed * 4.5);
+                this.drawOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.04);
+            } catch (e) {}
+        }
+
+        stopDrawing() {
+            if (!this.drawGain || !this.ctx) return;
+            try {
+                this.drawGain.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.03);
+                setTimeout(() => {
+                    if (this.drawOsc) {
+                        try { this.drawOsc.stop(); this.drawOsc.disconnect(); } catch (e) {}
+                        this.drawOsc = null;
+                    }
+                }, 50);
+            } catch (e) {}
+        }
+
+        playScore(score, isSpecial = false) {
+            if (!this.enabled) return;
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+
+            if (isSpecial || score < 50) {
+                // Playful comic boing
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(60, now + 0.35);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.36);
+                return;
+            }
+
+            if (score >= 95) {
+                // S+ / S Legendary Fanfare Arpeggio: C5 (523), E5 (659), G5 (784), C6 (1046)
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const t = now + idx * 0.085;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.001, t);
+                    gain.gain.linearRampToValueAtTime(0.14, t + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.46);
+                });
+            } else if (score >= 85) {
+                // A-Tier Chord: E5 (659), G5 (784), B5 (988)
+                [659.25, 783.99, 987.77].forEach((freq, idx) => {
+                    const t = now + idx * 0.075;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.001, t);
+                    gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.36);
+                });
+            } else if (score >= 70) {
+                // B/C-Tier: C5, E5
+                [523.25, 659.25].forEach((freq, idx) => {
+                    const t = now + idx * 0.09;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.001, t);
+                    gain.gain.linearRampToValueAtTime(0.09, t + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.29);
+                });
+            }
+        }
+    }
+
     /**
      * Modern Circle Drawing App
      * Architecture: Class-based modular design
@@ -648,21 +885,39 @@
             this.wrapper = document.getElementById('canvasWrapper');
             this.feedbackOverlay = document.getElementById('feedbackOverlay');
             this.feedbackScore = document.getElementById('feedbackScore');
+            this.feedbackGrade = document.getElementById('feedbackGrade');
             this.feedbackText = document.getElementById('feedbackText');
+            this.feedbackDetails = document.getElementById('feedbackDetails');
+            this.sound = new SoundFX();
             
             // State
             this.isDrawing = false;
             this.points = [];
             this.startTime = 0;
             this.rafId = null;
+            this.currentSweep = 0;
+            this.lastResult = null;
+            this.activeAnalysis = null;
             
             // Settings & Data
             this.settings = {
+                mode: localStorage.getItem('circleMode') || 'freehand', // freehand or target
                 difficulty: localStorage.getItem('circleDifficulty') || 'medium', // easy, medium, hard
                 theme: localStorage.getItem('circleTheme') || 'light',
                 showGhost: localStorage.getItem('circleGhost') !== 'false', // default true
+                showHeatmap: localStorage.getItem('circleHeatmap') !== 'false',
                 haptics: localStorage.getItem('circleHaptics') !== 'false'
             };
+
+            // Clear legacy buggy scores (such as the 93.5% triangle glitch)
+            const ver = localStorage.getItem('circle_algo_ver');
+            if (ver !== '2.1') {
+                localStorage.removeItem('circleHighScore_easy');
+                localStorage.removeItem('circleHighScore_medium');
+                localStorage.removeItem('circleHighScore_hard');
+                localStorage.removeItem('circleHistory');
+                localStorage.setItem('circle_algo_ver', '2.1');
+            }
 
             this.stats = {
                 highScore: parseFloat(localStorage.getItem(`circleHighScore_${this.settings.difficulty}`)) || 0,
@@ -749,14 +1004,21 @@
             // UI Controls
             document.getElementById('clearBtn').addEventListener('click', () => this.resetGame());
             document.getElementById('undoBtn').addEventListener('click', () => this.resetGame());
+            document.getElementById('shareBtn').addEventListener('click', () => this.generateScorecard());
+            document.getElementById('soundBtn').addEventListener('click', () => this.toggleSound());
             document.getElementById('themeBtn').addEventListener('click', () => this.toggleTheme());
             document.getElementById('settingsBtn').addEventListener('click', () => this.toggleSettings(true));
             document.getElementById('closeSettingsBtn').addEventListener('click', () => this.toggleSettings(false));
             document.getElementById('resetDataBtn').addEventListener('click', () => this.resetData());
 
-            // Settings Inputs
-            document.querySelectorAll('.segment-btn').forEach(btn => {
+            // Settings Inputs - Difficulty
+            document.querySelectorAll('.segment-btn[data-diff]').forEach(btn => {
                 btn.addEventListener('click', (e) => this.changeDifficulty(e.target.dataset.diff));
+            });
+
+            // Settings Inputs - Mode
+            document.querySelectorAll('.segment-btn[data-mode]').forEach(btn => {
+                btn.addEventListener('click', (e) => this.changeMode(e.target.dataset.mode));
             });
 
             const ghostToggle = document.getElementById('ghostToggle');
@@ -764,6 +1026,23 @@
             ghostToggle.addEventListener('change', (e) => {
                 this.settings.showGhost = e.target.checked;
                 localStorage.setItem('circleGhost', e.target.checked);
+                if (this.activeAnalysis) this.draw(this.activeAnalysis);
+            });
+
+            const heatmapToggle = document.getElementById('heatmapToggle');
+            heatmapToggle.checked = this.settings.showHeatmap;
+            heatmapToggle.addEventListener('change', (e) => {
+                this.settings.showHeatmap = e.target.checked;
+                localStorage.setItem('circleHeatmap', e.target.checked);
+                if (this.activeAnalysis) this.draw(this.activeAnalysis);
+            });
+
+            const soundToggle = document.getElementById('soundToggle');
+            soundToggle.checked = this.sound.enabled;
+            soundToggle.addEventListener('change', (e) => {
+                this.sound.enabled = e.target.checked;
+                localStorage.setItem('circleSound', e.target.checked);
+                this.updateSoundBtn();
             });
 
             const hapticToggle = document.getElementById('hapticToggle');
@@ -786,109 +1065,348 @@
             this.isDrawing = true;
             this.points = [pos];
             this.startTime = Date.now();
+            this.currentSweep = 0;
+            this.activeAnalysis = null;
             this.feedbackOverlay.classList.remove('show');
             document.getElementById('startTooltip').style.display = 'none';
             
-            // Haptic
-            if (this.settings.haptics && navigator.vibrate) navigator.vibrate(5);
+            this.sound.startDrawing();
+            if (this.settings.haptics && navigator.vibrate) navigator.vibrate(8);
         }
 
         moveDrawing(pos) {
             if (!this.isDrawing) return;
+            const prev = this.points[this.points.length - 1];
+            const dist = Math.hypot(pos.x - prev.x, pos.y - prev.y);
+            if (dist < 1.5) return; // filter tiny stationary jitter
+
             this.points.push(pos);
+            this.sound.updateDrawing(dist);
+
+            // Track angular progress relative to center
+            const cx = this.width / 2;
+            const cy = this.height / 2;
+            const prevAng = Math.atan2(prev.y - cy, prev.x - cx);
+            const currAng = Math.atan2(pos.y - cy, pos.x - cx);
+            let diff = currAng - prevAng;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            this.currentSweep += diff;
             
-            // Performance: Only vibrate every 10th point to save battery/performance
-            if (this.settings.haptics && this.points.length % 10 === 0 && navigator.vibrate) {
-                // navigator.vibrate(2); // Very subtle (commented out as it can be annoying on some devices)
+            if (this.settings.haptics && this.points.length % 12 === 0 && navigator.vibrate) {
+                navigator.vibrate(3);
             }
         }
 
         stopDrawing() {
             if (!this.isDrawing) return;
             this.isDrawing = false;
+            this.sound.stopDrawing();
 
-            if (this.points.length > 20) {
-                // Calculate score
+            if (this.points.length >= 10) {
                 const result = this.calculateAccuracy();
-                this.showResult(result);
+                if (result.score === 0 && result.tooShort) {
+                    this.resetGame();
+                } else {
+                    this.showResult(result);
+                }
             } else {
-                // Too short, just reset
                 this.resetGame();
             }
         }
 
+        // Uniform arc-length resampling to eliminate drawing speed bias
+        resample(pts, step = 3) {
+            if (pts.length < 2) return pts;
+            const res = [pts[0]];
+            let prev = pts[0];
+            let accDist = 0;
+            for (let i = 1; i < pts.length; i++) {
+                let curr = pts[i];
+                let d = Math.hypot(curr.x - prev.x, curr.y - prev.y);
+                if (d === 0) continue;
+                while (accDist + d >= step) {
+                    let t = (step - accDist) / d;
+                    let nx = prev.x + t * (curr.x - prev.x);
+                    let ny = prev.y + t * (curr.y - prev.y);
+                    let newPt = { x: nx, y: ny };
+                    res.push(newPt);
+                    prev = newPt;
+                    d = Math.hypot(curr.x - prev.x, curr.y - prev.y);
+                    accDist = 0;
+                }
+                accDist += d;
+                prev = curr;
+            }
+            return res;
+        }
+
+        // Algebraic least-squares circle fit (Kåsa / Pratt method)
+        fitCircle(pts) {
+            const n = pts.length;
+            if (n < 4) return null;
+            let sumX = 0, sumY = 0, sumX2 = 0, sumY2 = 0, sumXY = 0;
+            let sumZ = 0, sumXZ = 0, sumYZ = 0;
+            for (let i = 0; i < n; i++) {
+                const x = pts[i].x;
+                const y = pts[i].y;
+                const z = x * x + y * y;
+                sumX += x; sumY += y;
+                sumX2 += x * x; sumY2 += y * y;
+                sumXY += x * y;
+                sumZ += z;
+                sumXZ += x * z;
+                sumYZ += y * z;
+            }
+
+            const m = [
+                [sumX2, sumXY, sumX, sumXZ],
+                [sumXY, sumY2, sumY, sumYZ],
+                [sumX,  sumY,  n,    sumZ ]
+            ];
+
+            // 3x3 Gaussian elimination
+            for (let i = 0; i < 3; i++) {
+                let maxRow = i;
+                for (let k = i + 1; k < 3; k++) {
+                    if (Math.abs(m[k][i]) > Math.abs(m[maxRow][i])) maxRow = k;
+                }
+                const tmp = m[i]; m[i] = m[maxRow]; m[maxRow] = tmp;
+                const pivot = m[i][i];
+                if (Math.abs(pivot) < 1e-7) return null;
+                for (let j = i; j <= 3; j++) m[i][j] /= pivot;
+                for (let k = 0; k < 3; k++) {
+                    if (k !== i) {
+                        const factor = m[k][i];
+                        for (let j = i; j <= 3; j++) m[k][j] -= factor * m[i][j];
+                    }
+                }
+            }
+
+            const a = m[0][3] / 2;
+            const b = m[1][3] / 2;
+            const rSquared = m[2][3] + a * a + b * b;
+            const r = rSquared > 0 ? Math.sqrt(rSquared) : 0;
+            return { a, b, r };
+        }
+
+        // Sharp corner detector to identify triangles, squares, and polygons
+        detectCorners(pts) {
+            const n = pts.length;
+            if (n < 20) return [];
+            const step = 4;
+            const corners = [];
+            const extended = [];
+            for (let i = n - step; i < n; i++) extended.push(pts[i]);
+            for (let i = 0; i < n; i++) extended.push(pts[i]);
+            for (let i = 0; i < step; i++) extended.push(pts[i]);
+
+            const offset = step;
+            for (let i = 0; i < n; i++) {
+                const idx = i + offset;
+                const p0 = extended[idx - step];
+                const p1 = extended[idx];
+                const p2 = extended[idx + step];
+                const v1x = p1.x - p0.x, v1y = p1.y - p0.y;
+                const v2x = p2.x - p1.x, v2y = p2.y - p1.y;
+                const d1 = Math.hypot(v1x, v1y);
+                const d2 = Math.hypot(v2x, v2y);
+                if (d1 < 1e-4 || d2 < 1e-4) continue;
+                let cosAng = (v1x * v2x + v1y * v2y) / (d1 * d2);
+                cosAng = Math.max(-1, Math.min(1, cosAng));
+                const turnAngle = Math.acos(cosAng);
+                if (turnAngle > 0.85) { // Turning angle > ~49 degrees
+                    corners.push({ index: i, angle: turnAngle * 180 / Math.PI, pt: p1 });
+                }
+            }
+
+            // Cluster corners within 25px
+            const clustered = [];
+            for (const c of corners) {
+                if (clustered.length === 0) {
+                    clustered.push(c);
+                } else {
+                    const last = clustered[clustered.length - 1];
+                    const dist = Math.hypot(c.pt.x - last.pt.x, c.pt.y - last.pt.y);
+                    if (dist < 25) {
+                        if (c.angle > last.angle) clustered[clustered.length - 1] = c;
+                    } else {
+                        clustered.push(c);
+                    }
+                }
+            }
+            if (clustered.length > 1) {
+                const first = clustered[0], last = clustered[clustered.length - 1];
+                if (Math.hypot(first.pt.x - last.pt.x, first.pt.y - last.pt.y) < 25) {
+                    clustered.pop();
+                }
+            }
+            return clustered;
+        }
+
         calculateAccuracy() {
-            // Core Algorithm (Preserved from original but optimized)
-            const pts = this.points;
-            let sumX = 0, sumY = 0;
-            
-            // Calculate Centroid
-            for (let i = 0; i < pts.length; i++) {
-                sumX += pts[i].x;
-                sumY += pts[i].y;
+            const rawPts = this.points;
+            if (rawPts.length < 10) {
+                return { score: 0, tooShort: true, feedbackText: 'Keep Practicing', centerX: this.width/2, centerY: this.height/2, avgRadius: 40, stdDev: 0 };
             }
-            const centerX = sumX / pts.length;
-            const centerY = sumY / pts.length;
 
-            // Calculate Radii stats
-            let sumRadius = 0;
+            // Step 1: Arc-length uniform resampling (3px resolution)
+            const pts = this.resample(rawPts, 3);
+            const n = pts.length;
+            if (n < 20) {
+                return { score: 0, tooShort: true, feedbackText: 'Too short! Draw a full circle', centerX: this.width/2, centerY: this.height/2, avgRadius: 40, stdDev: 0 };
+            }
+
+            // Step 2: Optimal circle fit or Target Bullseye
+            const fit = this.fitCircle(pts);
+            if (!fit || fit.r < 15 || isNaN(fit.a) || isNaN(fit.b)) {
+                return { score: 0, tooShort: true, feedbackText: 'Too small! Draw a bigger circle', centerX: this.width/2, centerY: this.height/2, avgRadius: 30, stdDev: 0 };
+            }
+
+            // Target Mode fixed anchor vs Freehand fitted anchor
+            const isTargetMode = this.settings.mode === 'target';
+            const cx = isTargetMode ? (this.width / 2) : fit.a;
+            const cy = isTargetMode ? (this.height / 2) : fit.b;
+            const targetR = Math.min(this.width, this.height) * 0.28;
+            const R = isTargetMode ? targetR : fit.r;
+
+            // Step 3: Radial deviations relative to fitted radius R
+            let sumAbsDev = 0;
+            let sumSqDev = 0;
             const radii = [];
-            
-            for (let i = 0; i < pts.length; i++) {
-                const dx = pts[i].x - centerX;
-                const dy = pts[i].y - centerY;
-                const r = Math.sqrt(dx*dx + dy*dy);
-                radii.push(r);
-                sumRadius += r;
+            for (let i = 0; i < n; i++) {
+                const d = Math.hypot(pts[i].x - cx, pts[i].y - cy);
+                radii.push(d);
+                const dev = Math.abs(d - R) / R;
+                sumAbsDev += dev;
+                sumSqDev += dev * dev;
             }
-            const avgRadius = sumRadius / pts.length;
-
-            // Variance & StdDev
-            let sumVariance = 0;
-            for (let i = 0; i < radii.length; i++) {
-                const diff = radii[i] - avgRadius;
-                sumVariance += diff * diff;
-            }
-            const variance = sumVariance / pts.length;
+            const meanRelDev = sumAbsDev / n;
+            const rmsRelDev = Math.sqrt(sumSqDev / n);
+            const variance = radii.reduce((s, r) => s + (r - R) ** 2, 0) / n;
             const stdDev = Math.sqrt(variance);
 
-            // Difficulty adjustment
-            // Start deviation normalization based on canvas size
-            const maxDimension = Math.min(this.width, this.height) / 2;
-            
-            // Difficulty Multipliers (Higher divisor = Easier)
-            let difficultyDivisor = 1; 
-            if (this.settings.difficulty === 'easy') difficultyDivisor = 0.5; // Very forgiving
-            if (this.settings.difficulty === 'medium') difficultyDivisor = 1.0; // Standard
-            if (this.settings.difficulty === 'hard') difficultyDivisor = 1.5; // Strict
+            // Step 4: Isoperimetric quotient (Circularity / Roundness)
+            // Q = 4 * PI * Area / Perimeter^2 (1.0 for circle, ~0.60 for triangle, ~0.78 for square)
+            let area = 0;
+            let perim = 0;
+            for (let i = 0; i < n; i++) {
+                const p1 = pts[i];
+                const p2 = pts[(i + 1) % n];
+                area += p1.x * p2.y - p2.x * p1.y;
+                perim += Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            }
+            area = Math.abs(area) / 2;
+            const isoperimetric = Math.min(1.0, (4 * Math.PI * area) / (perim * perim));
 
-            // "Max Deviation" logic from original: maxDeviation = min(w,h)/2
-            // Original formula: accuracy = 100 - (stdDev / maxDeviation) * 100
-            // We apply difficulty by scaling the error term (stdDev)
-            
-            const rawError = (stdDev / maxDimension) * 100;
-            
-            // Apply difficulty curve
-            // For hard, we multiply error. For easy, we divide it.
-            const adjustedError = rawError * difficultyDivisor;
+            // Step 5: Angular coverage & loop rotation
+            let totalAngle = 0;
+            let prevAngle = Math.atan2(pts[0].y - cy, pts[0].x - cx);
+            const sectorHits = new Array(12).fill(0);
+            for (let i = 0; i < n; i++) {
+                const ang = Math.atan2(pts[i].y - cy, pts[i].x - cx);
+                let diff = ang - prevAngle;
+                while (diff > Math.PI) diff -= 2 * Math.PI;
+                while (diff < -Math.PI) diff += 2 * Math.PI;
+                totalAngle += diff;
+                prevAngle = ang;
+                const sec = Math.floor(((ang + Math.PI) / (2 * Math.PI)) * 12) % 12;
+                sectorHits[sec]++;
+            }
+            const filledSectors = sectorHits.filter(c => c > 0).length;
+            const coverageRatio = filledSectors / 12;
+            const loopRotations = Math.abs(totalAngle) / (2 * Math.PI);
 
-            let accuracy = Math.max(0, 100 - adjustedError);
+            // Step 6: Overlap / loop closure check
+            const directGap = Math.hypot(pts[0].x - pts[n - 1].x, pts[0].y - pts[n - 1].y);
+            const earlyCount = Math.min(35, Math.floor(n * 0.25));
+            let minOverlapDist = directGap;
+            for (let i = 0; i < earlyCount; i++) {
+                const d = Math.hypot(pts[n - 1].x - pts[i].x, pts[n - 1].y - pts[i].y);
+                if (d < minOverlapDist) minOverlapDist = d;
+            }
+            const effectiveGap = minOverlapDist / R;
+
+            // Step 7: Corner detection
+            const corners = this.detectCorners(pts);
+            const cornerCount = corners.length;
+
+            const minR = Math.min(...radii);
+            const maxR = Math.max(...radii);
+            const radialRatio = maxR / (minR || 1);
+
+            // Step 8: Difficulty scaling
+            const diffMult = { easy: 0.75, medium: 1.0, hard: 1.35 }[this.settings.difficulty] || 1.0;
+
+            // Base accuracy from radial consistency
+            const radialAcc = Math.max(0, 100 * (1 - (meanRelDev * 1.8 * diffMult) - (rmsRelDev * 1.0 * diffMult)));
             
-            // Closing gaps penalization (if start and end are far apart)
-            const gapDist = Math.hypot(pts[0].x - pts[pts.length-1].x, pts[0].y - pts[pts.length-1].y);
-            const gapPenalty = (gapDist / avgRadius) * 5; // 5% penalty for full radius gap
-            
-            // Only apply gap penalty if significant to avoid penalizing quick sketches
-            if (gapPenalty > 1) {
-                accuracy -= gapPenalty;
+            // Roundness factor calibrated so hand tremor on perimeter (0.94+) doesn't penalize
+            const normalizedIso = Math.min(1.0, isoperimetric / 0.94);
+            const circularityFactor = Math.pow(Math.max(0, normalizedIso), 2.2);
+            let score = radialAcc * (0.65 + 0.35 * circularityFactor);
+
+            // Penalty for detected sharp corners (triangles, squares, polygons)
+            if (cornerCount >= 3) {
+                const cornerPenalty = cornerCount === 3 ? 35 : 25;
+                score = Math.max(0, score - cornerPenalty);
+            }
+
+            // Penalty for gap / unclosed loop
+            if (effectiveGap > 0.08) {
+                const gapPenalty = Math.min(45, (effectiveGap - 0.08) * 45);
+                score = Math.max(0, score - gapPenalty);
+            }
+
+            // Penalty for incomplete rotation or missing sectors
+            if (coverageRatio < 0.85 || loopRotations < 0.8) {
+                const missingCoverage = Math.max(0.85 - coverageRatio, 0.8 - loopRotations);
+                score = Math.max(0, score - missingCoverage * 120);
+            } else if (loopRotations > 1.35) {
+                score = Math.max(0, score - (loopRotations - 1.35) * 30);
+            }
+
+            score = Math.max(0, Math.min(100, Math.round(score * 10) / 10));
+
+            // Intelligent contextual feedback
+            let feedbackText = '';
+            if (coverageRatio < 0.75 || loopRotations < 0.7) {
+                feedbackText = 'Incomplete circle! Complete the loop ⭕';
+            } else if (cornerCount === 3 && isoperimetric < 0.78) {
+                feedbackText = "That's a triangle! 🔺 Circles have no corners!";
+            } else if (cornerCount === 4 && isoperimetric < 0.86) {
+                feedbackText = "That's a square! ⏹️ Round out the corners!";
+            } else if (cornerCount >= 5 && isoperimetric < 0.88) {
+                feedbackText = 'Polygon detected! 🛑 Smooth out your lines!';
+            } else if (radialRatio > 1.45 && cornerCount < 3) {
+                feedbackText = 'Too oval! 🥚 Keep width & height even.';
+            } else {
+                if (score >= 98) feedbackText = 'Legendary Circle! 🌟';
+                else if (score >= 95) feedbackText = 'Godlike Precision! ✨';
+                else if (score >= 90) feedbackText = 'Masterful! 🎯';
+                else if (score >= 85) feedbackText = 'Excellent Work! 👏';
+                else if (score >= 80) feedbackText = 'Great Job! 👍';
+                else if (score >= 70) feedbackText = 'Good Effort! 💫';
+                else if (score >= 50) feedbackText = 'A bit wobbly, keep trying! 🌀';
+                else if (score >= 20) feedbackText = 'Keep Practicing! 💪';
+                else feedbackText = 'Are you trying? 🤔';
+            }
+
+            let details = `Roundness: ${(isoperimetric * 100).toFixed(0)}% • Error: ±${(meanRelDev * 100).toFixed(1)}%`;
+            if (cornerCount >= 3) {
+                details = `Corners: ${cornerCount} • Roundness: ${(isoperimetric * 100).toFixed(0)}%`;
             }
 
             return {
-                score: Math.max(0, Math.min(100, accuracy)),
-                centerX,
-                centerY,
-                avgRadius,
-                stdDev
+                score,
+                feedbackText,
+                details,
+                centerX: cx,
+                centerY: cy,
+                avgRadius: R,
+                stdDev,
+                isoperimetric,
+                meanRelDev
             };
         }
 
@@ -901,119 +1419,384 @@
         }
 
         draw(analysis = null) {
-            // Clear
             this.ctx.clearRect(0, 0, this.width, this.height);
-
-            // Style configuration
             const isDark = this.settings.theme === 'dark';
-            
-            // 1. Draw user path
-            if (this.points.length > 1) {
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.points[0].x, this.points[0].y);
-                
-                // Curve smoothing (Quadratic Bezier) for smoother look
-                for (let i = 1; i < this.points.length - 1; i++) {
-                    const xc = (this.points[i].x + this.points[i+1].x) / 2;
-                    const yc = (this.points[i].y + this.points[i+1].y) / 2;
-                    this.ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
-                }
-                // Connect last point
-                if (this.points.length > 2) {
-                     this.ctx.lineTo(this.points[this.points.length-1].x, this.points[this.points.length-1].y);
-                }
 
-                // Dynamic styling
-                this.ctx.lineCap = 'round';
-                this.ctx.lineJoin = 'round';
-                this.ctx.lineWidth = 4;
-                
-                // Color based on state
-                if (analysis) {
-                    // Result state
-                    const score = analysis.score;
-                    if (score >= 90) this.ctx.strokeStyle = '#10b981'; // Green
-                    else if (score >= 80) this.ctx.strokeStyle = '#06b6d4'; // Blue
-                    else if (score >= 70) this.ctx.strokeStyle = '#f59e0b'; // Orange
-                    else this.ctx.strokeStyle = '#ef4444'; // Red
-                } else {
-                    // Drawing state
-                    this.ctx.strokeStyle = isDark ? '#818cf8' : '#4f46e5';
-                    
-                    // Add subtle glow while drawing
-                    this.ctx.shadowBlur = 10;
-                    this.ctx.shadowColor = isDark ? 'rgba(99, 102, 241, 0.5)' : 'rgba(79, 70, 229, 0.4)';
-                }
-                
-                this.ctx.stroke();
-                
-                // Reset shadow
-                this.ctx.shadowBlur = 0;
-            }
-
-            // 2. Draw Ghost Circle (if enabled and analysis exists)
-            if (this.settings.showGhost && analysis) {
+            // 0. Target Mode Bullseye Guide
+            if (this.settings.mode === 'target') {
+                const targetR = Math.min(this.width, this.height) * 0.28;
                 this.ctx.beginPath();
-                this.ctx.arc(analysis.centerX, analysis.centerY, analysis.avgRadius, 0, Math.PI * 2);
-                this.ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                this.ctx.lineWidth = 2;
-                this.ctx.setLineDash([10, 10]); // Dashed line
+                this.ctx.arc(this.width / 2, this.height / 2, targetR, 0, Math.PI * 2);
+                this.ctx.strokeStyle = isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(79, 70, 229, 0.2)';
+                this.ctx.lineWidth = 2.5;
+                this.ctx.setLineDash([6, 6]);
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
+            }
+
+            // 1. Live Angle Sweep Progress Arc around Center
+            if (this.isDrawing && this.points.length > 3) {
+                const cx = this.width / 2;
+                const cy = this.height / 2;
+                const sweep = Math.min(Math.PI * 2, Math.abs(this.currentSweep || 0));
+                
+                // Track ring
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+                this.ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+
+                // Active progress arc
+                this.ctx.beginPath();
+                const startAng = -Math.PI / 2;
+                this.ctx.arc(cx, cy, 26, startAng, startAng + sweep);
+                this.ctx.strokeStyle = sweep >= Math.PI * 1.9 ? '#10b981' : (isDark ? '#818cf8' : '#4f46e5');
+                this.ctx.lineWidth = 3;
+                this.ctx.lineCap = 'round';
+                this.ctx.stroke();
+            }
+
+            // 2. Draw user path (with Heatmap or Solid glow)
+            if (this.points.length > 1) {
+                if (analysis && this.settings.showHeatmap && this.points.length > 2) {
+                    // Precision Error Heatmap
+                    const cx = analysis.centerX;
+                    const cy = analysis.centerY;
+                    const R = analysis.avgRadius;
+
+                    this.ctx.lineWidth = 4;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.lineJoin = 'round';
+
+                    for (let i = 0; i < this.points.length - 1; i++) {
+                        const p1 = this.points[i];
+                        const p2 = this.points[i + 1];
+                        const midX = (p1.x + p2.x) / 2;
+                        const midY = (p1.y + p2.y) / 2;
+                        const d = Math.hypot(midX - cx, midY - cy);
+                        const dev = Math.abs(d - R) / (R || 1);
+
+                        let strokeColor = '#10b981'; // Green (<2.5% error)
+                        if (dev > 0.09) strokeColor = '#ef4444'; // Red (>9% error)
+                        else if (dev > 0.05) strokeColor = '#f59e0b'; // Amber (5-9% error)
+                        else if (dev > 0.025) strokeColor = '#06b6d4'; // Cyan (2.5-5% error)
+
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(p1.x, p1.y);
+                        this.ctx.lineTo(p2.x, p2.y);
+                        this.ctx.strokeStyle = strokeColor;
+                        this.ctx.stroke();
+                    }
+                } else {
+                    // Standard smooth curve
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.points[0].x, this.points[0].y);
+                    for (let i = 1; i < this.points.length - 1; i++) {
+                        const xc = (this.points[i].x + this.points[i + 1].x) / 2;
+                        const yc = (this.points[i].y + this.points[i + 1].y) / 2;
+                        this.ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
+                    }
+                    if (this.points.length > 2) {
+                        this.ctx.lineTo(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y);
+                    }
+
+                    this.ctx.lineCap = 'round';
+                    this.ctx.lineJoin = 'round';
+                    this.ctx.lineWidth = 4;
+
+                    if (analysis) {
+                        const score = analysis.score;
+                        if (score >= 90) this.ctx.strokeStyle = '#10b981';
+                        else if (score >= 80) this.ctx.strokeStyle = '#06b6d4';
+                        else if (score >= 70) this.ctx.strokeStyle = '#f59e0b';
+                        else this.ctx.strokeStyle = '#ef4444';
+                    } else {
+                        this.ctx.strokeStyle = isDark ? '#818cf8' : '#4f46e5';
+                        this.ctx.shadowBlur = 10;
+                        this.ctx.shadowColor = isDark ? 'rgba(99, 102, 241, 0.5)' : 'rgba(79, 70, 229, 0.4)';
+                    }
+                    this.ctx.stroke();
+                    this.ctx.shadowBlur = 0;
+                }
+            }
+
+            // 3. Draw Ghost Circle Guide & Center Marker
+            if (this.settings.showGhost && analysis && analysis.avgRadius > 10) {
+                this.ctx.beginPath();
+                this.ctx.arc(analysis.centerX, analysis.centerY, analysis.avgRadius, 0, Math.PI * 2);
+                this.ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([8, 8]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+
+                // Fitted center point
+                this.ctx.beginPath();
+                this.ctx.arc(analysis.centerX, analysis.centerY, 3.5, 0, Math.PI * 2);
+                this.ctx.fillStyle = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(79, 70, 229, 0.5)';
+                this.ctx.fill();
             }
         }
 
         showResult(result) {
-            const score = result.score.toFixed(1);
-            
-            // 1. Render static frame with analysis visualization (colors, ghost)
+            this.lastResult = result;
+            this.activeAnalysis = result;
+            const numericScore = result.score;
+            const scoreFormatted = numericScore.toFixed(1);
+
+            // 1. Render static frame with analysis visualization (Heatmap & Ghost)
             this.draw(result);
-            
+
             // 2. Update Stats
-            this.stats.highScore = Math.max(this.stats.highScore, parseFloat(score));
+            this.stats.highScore = Math.max(this.stats.highScore, parseFloat(scoreFormatted));
             localStorage.setItem(`circleHighScore_${this.settings.difficulty}`, this.stats.highScore);
-            this.updateStatsDisplay(score);
+            this.updateStatsDisplay(scoreFormatted);
 
             // 3. Add to History
-            this.addToHistory(score);
+            this.addToHistory(scoreFormatted);
 
-            // 4. Show Feedback Overlay
-            this.feedbackScore.textContent = `${score}%`;
-            this.feedbackText.textContent = this.getFeedbackText(score);
+            // 4. Calculate Letter Grade
+            const grade = this.getGrade(numericScore);
+            if (this.feedbackGrade) {
+                this.feedbackGrade.textContent = grade.text;
+                this.feedbackGrade.style.background = grade.bg;
+                this.feedbackGrade.style.color = grade.color;
+                this.feedbackGrade.style.boxShadow = `0 4px 18px ${grade.glow}`;
+            }
+
+            // 5. Animate Score Count-Up
+            this.animateScoreCount(numericScore);
+            this.feedbackText.textContent = result.feedbackText || this.getFeedbackText(scoreFormatted);
+            if (this.feedbackDetails) {
+                this.feedbackDetails.textContent = result.details || '';
+            }
             this.feedbackOverlay.classList.add('show');
-            
-            // Colorize feedback text
-            if (score >= 90) this.feedbackScore.style.background = 'linear-gradient(135deg, #10b981, #34d399)';
-            else if (score >= 70) this.feedbackScore.style.background = 'linear-gradient(135deg, #f59e0b, #fbbf24)';
+
+            // 6. Colorize feedback text
+            if (numericScore >= 90) this.feedbackScore.style.background = 'linear-gradient(135deg, #10b981, #34d399)';
+            else if (numericScore >= 70) this.feedbackScore.style.background = 'linear-gradient(135deg, #f59e0b, #fbbf24)';
             else this.feedbackScore.style.background = 'linear-gradient(135deg, #ef4444, #f87171)';
             this.feedbackScore.style.webkitBackgroundClip = 'text';
 
-            // 5. Confetti if high score
-            if (score >= 90) {
+            // 7. Sound Effect & Haptics
+            const isSpecial = result.feedbackText && (result.feedbackText.includes('triangle') || result.feedbackText.includes('square') || result.feedbackText.includes('Incomplete'));
+            this.sound.playScore(numericScore, isSpecial);
+
+            // 8. Confetti for great scores
+            if (numericScore >= 90) {
                 this.triggerConfetti();
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Success pattern
-            } else if (score >= 70) {
-                if (navigator.vibrate) navigator.vibrate(50);
+                if (this.settings.haptics && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            } else if (numericScore >= 70) {
+                if (this.settings.haptics && navigator.vibrate) navigator.vibrate(50);
             }
+        }
+
+        getGrade(score) {
+            if (score >= 98) return { text: 'S+', color: '#ffffff', bg: 'linear-gradient(135deg, #f59e0b, #fbbf24)', glow: 'rgba(245, 158, 11, 0.5)' };
+            if (score >= 95) return { text: 'S', color: '#ffffff', bg: 'linear-gradient(135deg, #10b981, #34d399)', glow: 'rgba(16, 185, 129, 0.5)' };
+            if (score >= 90) return { text: 'A', color: '#ffffff', bg: 'linear-gradient(135deg, #06b6d4, #38bdf8)', glow: 'rgba(6, 182, 212, 0.4)' };
+            if (score >= 80) return { text: 'B', color: '#ffffff', bg: 'linear-gradient(135deg, #6366f1, #818cf8)', glow: 'rgba(99, 102, 241, 0.4)' };
+            if (score >= 70) return { text: 'C', color: '#ffffff', bg: 'linear-gradient(135deg, #f97316, #fb923c)', glow: 'rgba(249, 115, 22, 0.4)' };
+            if (score >= 50) return { text: 'D', color: '#ffffff', bg: 'linear-gradient(135deg, #e11d48, #f43f5e)', glow: 'rgba(225, 29, 72, 0.3)' };
+            return { text: 'F', color: '#ffffff', bg: 'linear-gradient(135deg, #ef4444, #7f1d1d)', glow: 'rgba(239, 68, 68, 0.4)' };
+        }
+
+        animateScoreCount(target) {
+            const duration = 650;
+            const start = performance.now();
+            const el = this.feedbackScore;
+
+            const step = (now) => {
+                const elapsed = now - start;
+                const progress = Math.min(1, elapsed / duration);
+                const ease = 1 - Math.pow(1 - progress, 3); // cubic ease out
+                const val = (target * ease).toFixed(1);
+                el.textContent = `${val}%`;
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    el.textContent = `${target.toFixed(1)}%`;
+                }
+            };
+            requestAnimationFrame(step);
+        }
+
+        toggleSound() {
+            this.sound.enabled = !this.sound.enabled;
+            localStorage.setItem('circleSound', this.sound.enabled);
+            const toggle = document.getElementById('soundToggle');
+            if (toggle) toggle.checked = this.sound.enabled;
+            this.updateSoundBtn();
+            this.showToast(this.sound.enabled ? 'Sound Effects Enabled 🔊' : 'Sound Effects Muted 🔇');
+        }
+
+        updateSoundBtn() {
+            const icon = document.querySelector('#soundBtn i');
+            if (icon) {
+                icon.className = this.sound.enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+            }
+        }
+
+        changeMode(mode) {
+            this.settings.mode = mode;
+            localStorage.setItem('circleMode', mode);
+            document.querySelectorAll('.segment-btn[data-mode]').forEach(btn => {
+                if (btn.dataset.mode === mode) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            const diffDisplay = document.getElementById('difficultyDisplay');
+            if (diffDisplay) {
+                const diffName = this.settings.difficulty.charAt(0).toUpperCase() + this.settings.difficulty.slice(1);
+                diffDisplay.textContent = mode === 'target' ? `Target (${diffName})` : diffName;
+            }
+            this.resetGame();
+            this.showToast(mode === 'target' ? 'Target Mode: Match the center guide ring!' : 'Freehand Mode: Draw anywhere!');
+        }
+
+        generateScorecard() {
+            if (!this.lastResult && this.points.length === 0) {
+                this.showToast('Draw a circle first to generate a card!');
+                return;
+            }
+
+            const card = document.createElement('canvas');
+            card.width = 650;
+            card.height = 760;
+            const c = card.getContext('2d');
+            const isDark = this.settings.theme === 'dark';
+
+            // Background
+            const bgGrad = c.createLinearGradient(0, 0, 650, 760);
+            if (isDark) {
+                bgGrad.addColorStop(0, '#0f172a');
+                bgGrad.addColorStop(1, '#1e1b4b');
+            } else {
+                bgGrad.addColorStop(0, '#f8fafc');
+                bgGrad.addColorStop(1, '#e0e7ff');
+            }
+            c.fillStyle = bgGrad;
+            c.fillRect(0, 0, 650, 760);
+
+            // Glow accent
+            const radialGlow = c.createRadialGradient(325, 300, 10, 325, 300, 280);
+            radialGlow.addColorStop(0, 'rgba(79, 70, 229, 0.15)');
+            radialGlow.addColorStop(1, 'transparent');
+            c.fillStyle = radialGlow;
+            c.fillRect(0, 0, 650, 760);
+
+            // Border
+            c.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(79, 70, 229, 0.2)';
+            c.lineWidth = 3;
+            c.strokeRect(16, 16, 618, 728);
+
+            // Header text
+            c.font = '800 28px Outfit, sans-serif';
+            c.fillStyle = isDark ? '#ffffff' : '#1e293b';
+            c.textAlign = 'center';
+            c.fillText('CIRCLE CHALLENGE', 325, 60);
+
+            c.font = '600 13px Outfit, sans-serif';
+            c.fillStyle = isDark ? '#94a3b8' : '#64748b';
+            c.fillText('PRECISION MASTERY REPORT', 325, 84);
+
+            // Drawing Preview Box
+            c.save();
+            c.beginPath();
+            c.roundRect(65, 110, 520, 380, 20);
+            c.clip();
+            c.drawImage(this.canvas, 0, 0, this.canvas.width, this.canvas.height, 65, 110, 520, 380);
+            c.restore();
+
+            c.strokeStyle = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
+            c.lineWidth = 2;
+            c.beginPath();
+            c.roundRect(65, 110, 520, 380, 20);
+            c.stroke();
+
+            // Score & Grade
+            const scoreVal = this.lastResult ? this.lastResult.score : 0;
+            const gradeObj = this.getGrade(scoreVal);
+
+            // Grade pill
+            c.font = '800 36px Outfit, sans-serif';
+            c.fillStyle = gradeObj.color === '#ffffff' ? '#6366f1' : gradeObj.color;
+            c.fillText(`GRADE ${gradeObj.text}`, 325, 545);
+
+            // Score value
+            c.font = '800 46px Outfit, sans-serif';
+            c.fillStyle = isDark ? '#ffffff' : '#0f172a';
+            c.fillText(`${scoreVal.toFixed(1)}%`, 325, 600);
+
+            // Sub-details
+            c.font = '600 15px Outfit, sans-serif';
+            c.fillStyle = isDark ? '#94a3b8' : '#64748b';
+            const detailStr = (this.lastResult && this.lastResult.details) ? this.lastResult.details : `Difficulty: ${this.settings.difficulty.toUpperCase()} • Mode: ${this.settings.mode.toUpperCase()}`;
+            c.fillText(detailStr, 325, 635);
+
+            // Timestamp
+            c.font = '500 12px Outfit, sans-serif';
+            c.fillStyle = isDark ? '#64748b' : '#94a3b8';
+            c.fillText(`Captured on ${new Date().toLocaleDateString()} • Circle Drawing Challenge`, 325, 700);
+
+            // Export to PNG
+            card.toBlob(blob => {
+                if (!blob) return;
+                const file = new File([blob], 'circle-challenge-card.png', { type: 'image/png' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        title: 'Circle Drawing Challenge',
+                        text: `I scored ${scoreVal.toFixed(1)}% (Grade ${gradeObj.text}) on the Circle Challenge!`,
+                        files: [file]
+                    }).catch(() => this.downloadBlob(blob));
+                } else {
+                    this.downloadBlob(blob);
+                }
+                this.showToast('Scorecard image downloaded! 📸');
+            });
+        }
+
+        downloadBlob(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `circle-challenge-${Date.now()}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        showToast(msg) {
+            const toast = document.getElementById('toastNotify');
+            const msgEl = document.getElementById('toastMsg');
+            if (!toast || !msgEl) return;
+            msgEl.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(this.toastTimeout);
+            this.toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
         }
         
         getFeedbackText(score) {
-            if (score >= 98) return "Legendary!";
-            if (score >= 95) return "Godlike Precision!";
-            if (score >= 90) return "Masterful!";
-            if (score >= 85) return "Excellent Work!";
-            if (score >= 80) return "Great Job!";
-            if (score >= 70) return "Good Effort!";
-            if (score >= 50) return "Acceptable";
-            if (score >= 10) return "Keep Practicing";
-            return "Are you trying?";
+            if (score >= 98) return "Legendary Circle! 🌟";
+            if (score >= 95) return "Godlike Precision! ✨";
+            if (score >= 90) return "Masterful! 🎯";
+            if (score >= 85) return "Excellent Work! 👏";
+            if (score >= 80) return "Great Job! 👍";
+            if (score >= 70) return "Good Effort! 💫";
+            if (score >= 50) return "A bit wobbly, keep trying! 🌀";
+            if (score >= 20) return "Keep Practicing! 💪";
+            return "Are you trying? 🤔";
         }
 
         resetGame() {
             this.points = [];
             this.isDrawing = false;
+            this.activeAnalysis = null;
+            this.currentSweep = 0;
             this.feedbackOverlay.classList.remove('show');
-            this.ctx.clearRect(0, 0, this.width, this.height);
+            if (this.feedbackDetails) this.feedbackDetails.textContent = '';
+            this.draw();
         }
 
         updateUI() {
@@ -1085,7 +1868,7 @@
                 const el = document.createElement('div');
                 el.className = 'history-item';
                 // Colorize score
-                let colorVar = '--text-main';
+                let colorVar = '--danger';
                 if (item.score >= 90) colorVar = '--success';
                 else if (item.score >= 70) colorVar = '--warning';
                 
