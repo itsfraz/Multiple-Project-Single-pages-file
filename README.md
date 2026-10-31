@@ -18,7 +18,7 @@ A curated collection of premium, single-page web applications showcasing modern 
 
 | Project | Description |
 | :--- | :--- |
-| **[Generative Art Studio](ArtCanvas.html)** | A professional-grade generative art tool. Create Fractal Trees, Flow Fields, and Cellular Automata with cinematic controls. |
+| **[Physical Art & Craft Studio](ArtCanvas.html)** | An interactive 3D physical art studio & academy. Explore Kintsugi ceramics, Kumiko joinery, kinetic sculpture, and stained glass with 3D models, exploded views, and step-by-step guides. |
 | **[Particle Sparkle System](Sparkle.html)** | An interactive physics playground featuring bursting particles, gravity effects, and mouse-reactive trails. |
 | **[Galaxy Explorer](Galaxy.html)** | A mesmerizing, auto-running simulation of a solar system/galaxy with orbital mechanics and ambient visuals. |
 
